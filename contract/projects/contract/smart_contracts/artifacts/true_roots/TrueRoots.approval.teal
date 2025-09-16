@@ -1,0 +1,883 @@
+#pragma version 10
+#pragma typetrack false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 0 1
+    bytecblock "status" "|" "auth_proc" "admin" "auth_lab" "reward_done" "batch_id" "lab_cert_cid" "QC_VERIFIED" "final_img_cid" "consumer_qr" "PROCESSED" "base_reward" "geo" "species" "COLLECTED" "SHIPPED"
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txn NumAppArgs
+    bz main_after_if_else@14
+    pushbytess 0x64f09adf 0xd23e14c8 0x981185ac 0x87810098 0xfb324adc 0x7394d8a4 0xfc671f66 0x75f19f2f // method "createApplication(byte[],byte[],byte[],uint64,uint64)void", method "create_batch(byte[],byte[],uint64,byte[],byte[],uint64)void", method "verify_qc(byte[],uint64,uint64)void", method "process_batch(byte[],byte[],uint64)void", method "ship_batch()void", method "reward_distributed()void", method "update_auth(byte[],byte[],uint64)void", method "provenance()byte[]"
+    txna ApplicationArgs 0
+    match main_createApplication_route@3 main_create_batch_route@4 main_verify_qc_route@5 main_process_batch_route@6 main_ship_batch_route@7 main_reward_distributed_route@8 main_update_auth_route@9 main_provenance_route@10
+
+main_after_if_else@14:
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    intc_0 // 0
+    return
+
+main_provenance_route@10:
+    // smart_contracts/true_roots/contract.algo.ts:161
+    // @abimethod({ readonly: true })
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    callsub provenance
+    dup
+    len
+    itob
+    extract 6 2
+    swap
+    concat
+    pushbytes 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_update_auth_route@9:
+    // smart_contracts/true_roots/contract.algo.ts:152
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    extract 2 0
+    txna ApplicationArgs 3
+    btoi
+    // smart_contracts/true_roots/contract.algo.ts:152
+    // @abimethod()
+    callsub update_auth
+    intc_1 // 1
+    return
+
+main_reward_distributed_route@8:
+    // smart_contracts/true_roots/contract.algo.ts:138
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    callsub reward_distributed
+    intc_1 // 1
+    return
+
+main_ship_batch_route@7:
+    // smart_contracts/true_roots/contract.algo.ts:129
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    callsub ship_batch
+    intc_1 // 1
+    return
+
+main_process_batch_route@6:
+    // smart_contracts/true_roots/contract.algo.ts:117
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    extract 2 0
+    txna ApplicationArgs 3
+    btoi
+    // smart_contracts/true_roots/contract.algo.ts:117
+    // @abimethod()
+    callsub process_batch
+    intc_1 // 1
+    return
+
+main_verify_qc_route@5:
+    // smart_contracts/true_roots/contract.algo.ts:105
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    btoi
+    txna ApplicationArgs 3
+    btoi
+    // smart_contracts/true_roots/contract.algo.ts:105
+    // @abimethod()
+    callsub verify_qc
+    intc_1 // 1
+    return
+
+main_create_batch_route@4:
+    // smart_contracts/true_roots/contract.algo.ts:91
+    // @abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    extract 2 0
+    txna ApplicationArgs 3
+    btoi
+    txna ApplicationArgs 4
+    extract 2 0
+    txna ApplicationArgs 5
+    extract 2 0
+    txna ApplicationArgs 6
+    btoi
+    // smart_contracts/true_roots/contract.algo.ts:91
+    // @abimethod()
+    callsub create_batch
+    intc_1 // 1
+    return
+
+main_createApplication_route@3:
+    // smart_contracts/true_roots/contract.algo.ts:61
+    // createApplication(admin: bytes, lab: bytes, proc: bytes, rewardAsa: uint64, baseReward: uint64) {
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    !
+    assert // can only call when creating
+    // smart_contracts/true_roots/contract.algo.ts:27
+    // export class TrueRoots extends Contract {
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    extract 2 0
+    txna ApplicationArgs 3
+    extract 2 0
+    txna ApplicationArgs 4
+    btoi
+    txna ApplicationArgs 5
+    btoi
+    // smart_contracts/true_roots/contract.algo.ts:61
+    // createApplication(admin: bytes, lab: bytes, proc: bytes, rewardAsa: uint64, baseReward: uint64) {
+    callsub createApplication
+    intc_1 // 1
+    return
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.createApplication(admin: bytes, lab: bytes, proc: bytes, rewardAsa: uint64, baseReward: uint64) -> void:
+createApplication:
+    // smart_contracts/true_roots/contract.algo.ts:61
+    // createApplication(admin: bytes, lab: bytes, proc: bytes, rewardAsa: uint64, baseReward: uint64) {
+    proto 5 0
+    // smart_contracts/true_roots/contract.algo.ts:29
+    // admin = GlobalState<bytes>();
+    bytec_3 // "admin"
+    // smart_contracts/true_roots/contract.algo.ts:63
+    // this.admin.value = admin;
+    frame_dig -5
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:30
+    // auth_lab = GlobalState<bytes>();
+    bytec 4 // "auth_lab"
+    // smart_contracts/true_roots/contract.algo.ts:64
+    // this.auth_lab.value = lab;
+    frame_dig -4
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:31
+    // auth_proc = GlobalState<bytes>();
+    bytec_2 // "auth_proc"
+    // smart_contracts/true_roots/contract.algo.ts:65
+    // this.auth_proc.value = proc;
+    frame_dig -3
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:34
+    // reward_asa = GlobalState<uint64>();
+    pushbytes "reward_asa"
+    // smart_contracts/true_roots/contract.algo.ts:66
+    // this.reward_asa.value = rewardAsa;
+    frame_dig -2
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:35
+    // base_reward = GlobalState<uint64>();
+    bytec 12 // "base_reward"
+    // smart_contracts/true_roots/contract.algo.ts:67
+    // this.base_reward.value = baseReward;
+    frame_dig -1
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:36
+    // reward_done = GlobalState<uint64>(); // 0/1
+    bytec 5 // "reward_done"
+    // smart_contracts/true_roots/contract.algo.ts:68
+    // this.reward_done.value = Uint64(0);
+    intc_0 // 0
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    bytec_0 // "status"
+    // smart_contracts/true_roots/contract.algo.ts:11
+    // export const STATUS_INIT = Bytes("INITIALIZED");
+    pushbytes "INITIALIZED"
+    // smart_contracts/true_roots/contract.algo.ts:70
+    // this.status.value = STATUS_INIT;
+    app_global_put
+    retsub
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.onlyAdmin() -> void:
+onlyAdmin:
+    // smart_contracts/true_roots/contract.algo.ts:77
+    // assert(Txn.sender.bytes.equals(this.admin.value), ERR_NOT_ADMIN);
+    txn Sender
+    // smart_contracts/true_roots/contract.algo.ts:29
+    // admin = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_3 // "admin"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:77
+    // assert(Txn.sender.bytes.equals(this.admin.value), ERR_NOT_ADMIN);
+    ==
+    assert // E_ADMIN
+    retsub
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.create_batch(batch_id: bytes, collector: bytes, collected_at: uint64, geo: bytes, species: bytes, quantity_kg: uint64) -> void:
+create_batch:
+    // smart_contracts/true_roots/contract.algo.ts:91-92
+    // @abimethod()
+    // create_batch(batch_id: bytes, collector: bytes, collected_at: uint64, geo: bytes, species: bytes, quantity_kg: uint64) {
+    proto 6 0
+    // smart_contracts/true_roots/contract.algo.ts:39
+    // batch_id = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 6 // "batch_id"
+    // smart_contracts/true_roots/contract.algo.ts:93
+    // assert(!this.batch_id.hasValue, ERR_EXISTS);
+    app_global_get_ex
+    bury 1
+    !
+    assert // E_EXISTS
+    // smart_contracts/true_roots/contract.algo.ts:94
+    // assert(quantity_kg > 0, ERR_QTY);
+    frame_dig -1
+    assert // E_QTY
+    // smart_contracts/true_roots/contract.algo.ts:39
+    // batch_id = GlobalState<bytes>();
+    bytec 6 // "batch_id"
+    // smart_contracts/true_roots/contract.algo.ts:95
+    // this.batch_id.value = batch_id;
+    frame_dig -6
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:40
+    // collector = GlobalState<bytes>();
+    pushbytes "collector"
+    // smart_contracts/true_roots/contract.algo.ts:96
+    // this.collector.value = collector;
+    frame_dig -5
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:41
+    // collected_at = GlobalState<uint64>();
+    pushbytes "collected_at"
+    // smart_contracts/true_roots/contract.algo.ts:97
+    // this.collected_at.value = collected_at;
+    frame_dig -4
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:42
+    // geo = GlobalState<bytes>(); // "lat,lng"
+    bytec 13 // "geo"
+    // smart_contracts/true_roots/contract.algo.ts:98
+    // this.geo.value = geo;
+    frame_dig -3
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:43
+    // species = GlobalState<bytes>();
+    bytec 14 // "species"
+    // smart_contracts/true_roots/contract.algo.ts:99
+    // this.species.value = species;
+    frame_dig -2
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:44
+    // quantity_kg = GlobalState<uint64>();
+    pushbytes "quantity_kg"
+    // smart_contracts/true_roots/contract.algo.ts:100
+    // this.quantity_kg.value = quantity_kg;
+    frame_dig -1
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    bytec_0 // "status"
+    // smart_contracts/true_roots/contract.algo.ts:6
+    // export const STATUS_COLLECTED = Bytes("COLLECTED");
+    bytec 15 // "COLLECTED"
+    // smart_contracts/true_roots/contract.algo.ts:101
+    // this.status.value = STATUS_COLLECTED;
+    app_global_put
+    retsub
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.verify_qc(lab_cert_cid: bytes, authenticity_score: uint64, qc_at: uint64) -> void:
+verify_qc:
+    // smart_contracts/true_roots/contract.algo.ts:105-106
+    // @abimethod()
+    // verify_qc(lab_cert_cid: bytes, authenticity_score: uint64, qc_at: uint64) {
+    proto 3 0
+    // smart_contracts/true_roots/contract.algo.ts:80
+    // assert(Txn.sender.bytes.equals(this.auth_lab.value), ERR_NOT_LAB);
+    txn Sender
+    // smart_contracts/true_roots/contract.algo.ts:30
+    // auth_lab = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 4 // "auth_lab"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:80
+    // assert(Txn.sender.bytes.equals(this.auth_lab.value), ERR_NOT_LAB);
+    ==
+    assert // E_LAB
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:6
+    // export const STATUS_COLLECTED = Bytes("COLLECTED");
+    bytec 15 // "COLLECTED"
+    // smart_contracts/true_roots/contract.algo.ts:108
+    // assert(this.status.value.equals(STATUS_COLLECTED) || this.status.value.equals(STATUS_QC_PENDING), ERR_BAD_STATUS);
+    ==
+    bnz verify_qc_bool_true@2
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:7
+    // export const STATUS_QC_PENDING = Bytes("QC_PENDING");
+    pushbytes "QC_PENDING"
+    // smart_contracts/true_roots/contract.algo.ts:108
+    // assert(this.status.value.equals(STATUS_COLLECTED) || this.status.value.equals(STATUS_QC_PENDING), ERR_BAD_STATUS);
+    ==
+    bz verify_qc_bool_false@3
+
+verify_qc_bool_true@2:
+    intc_1 // 1
+
+verify_qc_bool_merge@4:
+    // smart_contracts/true_roots/contract.algo.ts:108
+    // assert(this.status.value.equals(STATUS_COLLECTED) || this.status.value.equals(STATUS_QC_PENDING), ERR_BAD_STATUS);
+    assert // E_STATUS
+    // smart_contracts/true_roots/contract.algo.ts:109
+    // assert(authenticity_score <= Uint64(100), ERR_SCORE);
+    frame_dig -2
+    pushint 100 // 100
+    <=
+    assert // E_SCORE
+    // smart_contracts/true_roots/contract.algo.ts:48
+    // lab_cert_cid = GlobalState<bytes>();
+    bytec 7 // "lab_cert_cid"
+    // smart_contracts/true_roots/contract.algo.ts:110
+    // this.lab_cert_cid.value = lab_cert_cid;
+    frame_dig -3
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:50
+    // authenticity_score = GlobalState<uint64>();
+    pushbytes "authenticity_score"
+    // smart_contracts/true_roots/contract.algo.ts:111
+    // this.authenticity_score.value = authenticity_score;
+    frame_dig -2
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:49
+    // qc_at = GlobalState<uint64>();
+    pushbytes "qc_at"
+    // smart_contracts/true_roots/contract.algo.ts:112
+    // this.qc_at.value = qc_at;
+    frame_dig -1
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    bytec_0 // "status"
+    // smart_contracts/true_roots/contract.algo.ts:8
+    // export const STATUS_QC_VERIFIED = Bytes("QC_VERIFIED");
+    bytec 8 // "QC_VERIFIED"
+    // smart_contracts/true_roots/contract.algo.ts:113
+    // this.status.value = STATUS_QC_VERIFIED;
+    app_global_put
+    retsub
+
+verify_qc_bool_false@3:
+    intc_0 // 0
+    b verify_qc_bool_merge@4
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.process_batch(final_img_cid: bytes, consumer_qr: bytes, proc_at: uint64) -> void:
+process_batch:
+    // smart_contracts/true_roots/contract.algo.ts:117-118
+    // @abimethod()
+    // process_batch(final_img_cid: bytes, consumer_qr: bytes, proc_at: uint64) {
+    proto 3 0
+    // smart_contracts/true_roots/contract.algo.ts:83
+    // assert(Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    txn Sender
+    // smart_contracts/true_roots/contract.algo.ts:31
+    // auth_proc = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_2 // "auth_proc"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:83
+    // assert(Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    ==
+    assert // E_PROC
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:8
+    // export const STATUS_QC_VERIFIED = Bytes("QC_VERIFIED");
+    bytec 8 // "QC_VERIFIED"
+    // smart_contracts/true_roots/contract.algo.ts:120
+    // assert(this.status.value.equals(STATUS_QC_VERIFIED), ERR_BAD_STATUS);
+    ==
+    assert // E_STATUS
+    // smart_contracts/true_roots/contract.algo.ts:55
+    // final_img_cid = GlobalState<bytes>();
+    bytec 9 // "final_img_cid"
+    // smart_contracts/true_roots/contract.algo.ts:121
+    // this.final_img_cid.value = final_img_cid;
+    frame_dig -3
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:56
+    // consumer_qr = GlobalState<bytes>();
+    bytec 10 // "consumer_qr"
+    // smart_contracts/true_roots/contract.algo.ts:122
+    // this.consumer_qr.value = consumer_qr;
+    frame_dig -2
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:54
+    // proc_at = GlobalState<uint64>();
+    pushbytes "proc_at"
+    // smart_contracts/true_roots/contract.algo.ts:123
+    // this.proc_at.value = proc_at;
+    frame_dig -1
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:53
+    // processor = GlobalState<bytes>();
+    pushbytes "processor"
+    // smart_contracts/true_roots/contract.algo.ts:124
+    // this.processor.value = Txn.sender.bytes;
+    txn Sender
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    bytec_0 // "status"
+    // smart_contracts/true_roots/contract.algo.ts:9
+    // export const STATUS_PROCESSED = Bytes("PROCESSED");
+    bytec 11 // "PROCESSED"
+    // smart_contracts/true_roots/contract.algo.ts:125
+    // this.status.value = STATUS_PROCESSED;
+    app_global_put
+    retsub
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.ship_batch() -> void:
+ship_batch:
+    // smart_contracts/true_roots/contract.algo.ts:132
+    // assert(Txn.sender.bytes.equals(this.admin.value) || Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    txn Sender
+    // smart_contracts/true_roots/contract.algo.ts:29
+    // admin = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_3 // "admin"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:132
+    // assert(Txn.sender.bytes.equals(this.admin.value) || Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    ==
+    bnz ship_batch_bool_true@2
+    txn Sender
+    // smart_contracts/true_roots/contract.algo.ts:31
+    // auth_proc = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_2 // "auth_proc"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:132
+    // assert(Txn.sender.bytes.equals(this.admin.value) || Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    ==
+    bz ship_batch_bool_false@3
+
+ship_batch_bool_true@2:
+    intc_1 // 1
+
+ship_batch_bool_merge@4:
+    // smart_contracts/true_roots/contract.algo.ts:132
+    // assert(Txn.sender.bytes.equals(this.admin.value) || Txn.sender.bytes.equals(this.auth_proc.value), ERR_NOT_PROC);
+    assert // E_PROC
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:9
+    // export const STATUS_PROCESSED = Bytes("PROCESSED");
+    bytec 11 // "PROCESSED"
+    // smart_contracts/true_roots/contract.algo.ts:133
+    // assert(this.status.value.equals(STATUS_PROCESSED), ERR_BAD_STATUS);
+    ==
+    assert // E_STATUS
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    bytec_0 // "status"
+    // smart_contracts/true_roots/contract.algo.ts:10
+    // export const STATUS_SHIPPED = Bytes("SHIPPED");
+    bytec 16 // "SHIPPED"
+    // smart_contracts/true_roots/contract.algo.ts:134
+    // this.status.value = STATUS_SHIPPED;
+    app_global_put
+    retsub
+
+ship_batch_bool_false@3:
+    intc_0 // 0
+    b ship_batch_bool_merge@4
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.reward_distributed() -> void:
+reward_distributed:
+    // smart_contracts/true_roots/contract.algo.ts:140
+    // this.onlyAdmin();
+    callsub onlyAdmin
+    // smart_contracts/true_roots/contract.algo.ts:36
+    // reward_done = GlobalState<uint64>(); // 0/1
+    intc_0 // 0
+    bytec 5 // "reward_done"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:141
+    // assert(this.reward_done.value === Uint64(0), ERR_REWARD_DONE);
+    !
+    assert // E_REWARD_DONE
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:8
+    // export const STATUS_QC_VERIFIED = Bytes("QC_VERIFIED");
+    bytec 8 // "QC_VERIFIED"
+    // smart_contracts/true_roots/contract.algo.ts:143
+    // this.status.value.equals(STATUS_QC_VERIFIED) ||
+    ==
+    // smart_contracts/true_roots/contract.algo.ts:143-144
+    // this.status.value.equals(STATUS_QC_VERIFIED) ||
+    //   this.status.value.equals(STATUS_PROCESSED) ||
+    bnz reward_distributed_bool_true@3
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:9
+    // export const STATUS_PROCESSED = Bytes("PROCESSED");
+    bytec 11 // "PROCESSED"
+    // smart_contracts/true_roots/contract.algo.ts:144
+    // this.status.value.equals(STATUS_PROCESSED) ||
+    ==
+    // smart_contracts/true_roots/contract.algo.ts:143-144
+    // this.status.value.equals(STATUS_QC_VERIFIED) ||
+    //   this.status.value.equals(STATUS_PROCESSED) ||
+    bnz reward_distributed_bool_true@3
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:10
+    // export const STATUS_SHIPPED = Bytes("SHIPPED");
+    bytec 16 // "SHIPPED"
+    // smart_contracts/true_roots/contract.algo.ts:145
+    // this.status.value.equals(STATUS_SHIPPED),
+    ==
+    // smart_contracts/true_roots/contract.algo.ts:143-145
+    // this.status.value.equals(STATUS_QC_VERIFIED) ||
+    //   this.status.value.equals(STATUS_PROCESSED) ||
+    //   this.status.value.equals(STATUS_SHIPPED),
+    bz reward_distributed_bool_false@4
+
+reward_distributed_bool_true@3:
+    intc_1 // 1
+
+reward_distributed_bool_merge@5:
+    // smart_contracts/true_roots/contract.algo.ts:142-147
+    // assert(
+    //   this.status.value.equals(STATUS_QC_VERIFIED) ||
+    //     this.status.value.equals(STATUS_PROCESSED) ||
+    //     this.status.value.equals(STATUS_SHIPPED),
+    //   ERR_BAD_STATUS
+    // );
+    assert // E_STATUS
+    // smart_contracts/true_roots/contract.algo.ts:36
+    // reward_done = GlobalState<uint64>(); // 0/1
+    bytec 5 // "reward_done"
+    // smart_contracts/true_roots/contract.algo.ts:148
+    // this.reward_done.value = Uint64(1);
+    intc_1 // 1
+    app_global_put
+    retsub
+
+reward_distributed_bool_false@4:
+    intc_0 // 0
+    b reward_distributed_bool_merge@5
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.update_auth(new_lab: bytes, new_proc: bytes, new_base_reward: uint64) -> void:
+update_auth:
+    // smart_contracts/true_roots/contract.algo.ts:152-153
+    // @abimethod()
+    // update_auth(new_lab: bytes, new_proc: bytes, new_base_reward: uint64) {
+    proto 3 0
+    // smart_contracts/true_roots/contract.algo.ts:154
+    // this.onlyAdmin();
+    callsub onlyAdmin
+    // smart_contracts/true_roots/contract.algo.ts:30
+    // auth_lab = GlobalState<bytes>();
+    bytec 4 // "auth_lab"
+    // smart_contracts/true_roots/contract.algo.ts:155
+    // this.auth_lab.value = new_lab;
+    frame_dig -3
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:31
+    // auth_proc = GlobalState<bytes>();
+    bytec_2 // "auth_proc"
+    // smart_contracts/true_roots/contract.algo.ts:156
+    // this.auth_proc.value = new_proc;
+    frame_dig -2
+    app_global_put
+    // smart_contracts/true_roots/contract.algo.ts:35
+    // base_reward = GlobalState<uint64>();
+    bytec 12 // "base_reward"
+    // smart_contracts/true_roots/contract.algo.ts:157
+    // this.base_reward.value = new_base_reward;
+    frame_dig -1
+    app_global_put
+    retsub
+
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.provenance() -> bytes:
+provenance:
+    // smart_contracts/true_roots/contract.algo.ts:161-162
+    // @abimethod({ readonly: true })
+    // provenance(): bytes {
+    proto 0 1
+    // smart_contracts/true_roots/contract.algo.ts:39
+    // batch_id = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 6 // "batch_id"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:165-166
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:45
+    // status = GlobalState<bytes>();
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:165-167
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:165-168
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    //   .concat(sep)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:43
+    // species = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 14 // "species"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:165-169
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    //   .concat(sep)
+    //   .concat(this.species.value)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:165-170
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    //   .concat(sep)
+    //   .concat(this.species.value)
+    //   .concat(sep)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:42
+    // geo = GlobalState<bytes>(); // "lat,lng"
+    intc_0 // 0
+    bytec 13 // "geo"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:165-171
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    //   .concat(sep)
+    //   .concat(this.species.value)
+    //   .concat(sep)
+    //   .concat(this.geo.value)
+    concat
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:165-172
+    // let out = this.batch_id.value
+    //   .concat(sep)
+    //   .concat(this.status.value)
+    //   .concat(sep)
+    //   .concat(this.species.value)
+    //   .concat(sep)
+    //   .concat(this.geo.value)
+    //   .concat(sep);
+    concat
+    dup
+    // smart_contracts/true_roots/contract.algo.ts:48
+    // lab_cert_cid = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 7 // "lab_cert_cid"
+    // smart_contracts/true_roots/contract.algo.ts:173
+    // if (this.lab_cert_cid.hasValue) out = out.concat(this.lab_cert_cid.value);
+    app_global_get_ex
+    bury 1
+    bz provenance_after_if_else@2
+    // smart_contracts/true_roots/contract.algo.ts:48
+    // lab_cert_cid = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 7 // "lab_cert_cid"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:173
+    // if (this.lab_cert_cid.hasValue) out = out.concat(this.lab_cert_cid.value);
+    frame_dig 0
+    swap
+    concat
+    frame_bury 1
+
+provenance_after_if_else@2:
+    frame_dig 1
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:174
+    // out = out.concat(sep);
+    concat
+    dup
+    frame_bury 0
+    // smart_contracts/true_roots/contract.algo.ts:55
+    // final_img_cid = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 9 // "final_img_cid"
+    // smart_contracts/true_roots/contract.algo.ts:175
+    // if (this.final_img_cid.hasValue) out = out.concat(this.final_img_cid.value);
+    app_global_get_ex
+    bury 1
+    swap
+    frame_bury 1
+    bz provenance_after_if_else@4
+    // smart_contracts/true_roots/contract.algo.ts:55
+    // final_img_cid = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 9 // "final_img_cid"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:175
+    // if (this.final_img_cid.hasValue) out = out.concat(this.final_img_cid.value);
+    frame_dig 0
+    swap
+    concat
+    frame_bury 1
+
+provenance_after_if_else@4:
+    frame_dig 1
+    // smart_contracts/true_roots/contract.algo.ts:164
+    // let sep = Bytes("|");
+    bytec_1 // "|"
+    // smart_contracts/true_roots/contract.algo.ts:176
+    // out = out.concat(sep);
+    concat
+    dup
+    frame_bury 0
+    // smart_contracts/true_roots/contract.algo.ts:56
+    // consumer_qr = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 10 // "consumer_qr"
+    // smart_contracts/true_roots/contract.algo.ts:177
+    // if (this.consumer_qr.hasValue) out = out.concat(this.consumer_qr.value);
+    app_global_get_ex
+    bury 1
+    swap
+    frame_bury 1
+    bz provenance_after_if_else@6
+    // smart_contracts/true_roots/contract.algo.ts:56
+    // consumer_qr = GlobalState<bytes>();
+    intc_0 // 0
+    bytec 10 // "consumer_qr"
+    app_global_get_ex
+    assert // check GlobalState exists
+    // smart_contracts/true_roots/contract.algo.ts:177
+    // if (this.consumer_qr.hasValue) out = out.concat(this.consumer_qr.value);
+    frame_dig 0
+    swap
+    concat
+    frame_bury 1
+
+provenance_after_if_else@6:
+    frame_dig 1
+    // smart_contracts/true_roots/contract.algo.ts:178
+    // return out;
+    frame_bury 0
+    retsub

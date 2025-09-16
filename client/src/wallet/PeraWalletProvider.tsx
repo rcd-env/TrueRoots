@@ -1,7 +1,6 @@
 import React, {
   createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -26,12 +25,7 @@ interface WalletContextShape {
 
 const WalletContext = createContext<WalletContextShape | undefined>(undefined);
 
-export const usePeraWallet = () => {
-  const ctx = useContext(WalletContext);
-  if (!ctx)
-    throw new Error("usePeraWallet must be used within PeraWalletProvider");
-  return ctx;
-};
+export { WalletContext };
 
 // We create a single instance but lazily initialize (library handles internal WC session persistence)
 const pera = new PeraWalletConnect();
@@ -84,10 +78,17 @@ export const PeraWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   // Listen for underlying disconnect events (mobile)
   useEffect(() => {
     // underlying WalletConnect v1 object exposed at pera.connector after a session
-    const wc: any = (pera as unknown as { connector?: unknown }).connector; // library type does not export internal WC type
+    const wc = (
+      pera as unknown as {
+        connector?: {
+          on?: (event: string, handler: () => void) => void;
+          off?: (event: string, handler: () => void) => void;
+        };
+      }
+    ).connector;
     if (!wc || typeof wc !== "object") return;
-    const maybeOn = (wc as any).on?.bind(wc);
-    const maybeOff = (wc as any).off?.bind(wc);
+    const maybeOn = wc.on?.bind(wc);
+    const maybeOff = wc.off?.bind(wc);
     const handler = () => setAddress(null);
     if (maybeOn) maybeOn("disconnect", handler);
     return () => {

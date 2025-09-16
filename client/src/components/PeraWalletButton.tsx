@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Wallet } from "lucide-react";
-import { usePeraWallet } from "../wallet/PeraWalletProvider";
-import Button from "./ui/Button";
+import { usePeraWallet } from "../wallet/usePeraWallet";
 
 const PeraWalletButton: React.FC = () => {
   const {
@@ -47,7 +46,16 @@ const PeraWalletButton: React.FC = () => {
   };
 
   return (
-    <div className="fixed top-6 right-6 z-50 flex flex-col items-end space-y-2">
+    <div
+      className="flex flex-col items-end space-y-2"
+      style={{
+        position: "fixed",
+        top: 16,
+        right: 16,
+        pointerEvents: "none",
+        zIndex: 9999,
+      }}
+    >
       {error && (
         <div className="bg-red-50 border border-red-300 text-red-700 px-3 py-2 rounded-lg shadow text-xs flex items-start space-x-2 w-60">
           <span className="flex-1 leading-snug">{error}</span>
@@ -66,70 +74,158 @@ const PeraWalletButton: React.FC = () => {
         </div>
       )}
       {!isConnected ? (
-        <Button
-          onClick={connect}
-          disabled={isConnecting}
-          loading={isConnecting}
-          variant="primary"
-          size="md"
-          className="shadow focus:ring-green-500 pl-3 pr-4"
-        >
-          <Wallet className="w-4 h-4 mr-2" />
-          {isConnecting ? "Connecting…" : "Connect Wallet"}
-        </Button>
+        <div style={{ pointerEvents: "auto" }}>
+          <button
+            onClick={connect}
+            disabled={isConnecting}
+            className="inline-flex items-center justify-center gap-3 px-8 py-4 font-semibold transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-emerald-300/30 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg"
+            style={{
+              backgroundColor: "#059669",
+              borderRadius: "20px",
+              border: "none",
+              minWidth: "180px",
+              height: "56px",
+              fontSize: "16px",
+              color: "#ffffff",
+            }}
+            onMouseEnter={(e) => {
+              if (!isConnecting) {
+                e.currentTarget.style.backgroundColor = "#047857";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isConnecting) {
+                e.currentTarget.style.backgroundColor = "#059669";
+              }
+            }}
+          >
+            <Wallet className="w-6 h-6" style={{ color: "#ffffff" }} />
+            <span style={{ color: "#ffffff" }}>
+              {isConnecting ? "Connecting…" : "Connect Wallet"}
+            </span>
+          </button>
+        </div>
       ) : (
-        <div className="relative" ref={menuRef}>
+        <div
+          className="relative"
+          ref={menuRef}
+          style={{ pointerEvents: "auto", zIndex: 10000 }}
+        >
           <button
             onClick={() => setOpen((o) => !o)}
             aria-haspopup="menu"
             aria-expanded={open}
-            className="inline-flex items-center gap-2 pl-3 pr-2 py-2 rounded-lg bg-white border border-green-600/50 hover:border-green-600 shadow-sm hover:shadow transition text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="inline-flex items-center justify-center gap-3 px-6 py-4 font-semibold transition-all duration-200 focus:outline-none hover:shadow-md"
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "20px",
+              border: "2px solid #059669",
+              minWidth: "200px",
+              height: "56px",
+              fontSize: "16px",
+              color: "#000000",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#f0fdf4";
+              e.currentTarget.style.borderColor = "#047857";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#ffffff";
+              e.currentTarget.style.borderColor = "#059669";
+            }}
           >
-            <span className="flex items-center gap-1">
-              <Wallet className="w-4 h-4 text-green-600" />
+            <Wallet className="w-5 h-5" style={{ color: "#059669" }} />
+            <span className="font-semibold" style={{ color: "#000000" }}>
               {truncateAddress(address)}
             </span>
-            <span className="px-1.5 py-0.5 rounded bg-green-50 text-green-700 text-[10px] font-semibold tracking-wide border border-green-200">
-              TESTNET
-            </span>
-            <svg
-              className={`h-4 w-4 text-gray-500 transition-transform ${
-                open ? "rotate-180" : ""
-              }`}
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
+            <span
+              className="px-2 py-1 text-xs font-medium uppercase"
+              style={{
+                backgroundColor: "transparent",
+                color: "#059669",
+                borderRadius: "6px",
+              }}
             >
-              <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.586l3.71-3.356a.75.75 0 111.04 1.08l-4.243 3.84a.75.75 0 01-1.04 0L5.21 8.29a.75.75 0 01.02-1.08z" />
-            </svg>
+              Testnet
+            </span>
           </button>
           {open && (
             <div
               role="menu"
-              className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur border border-gray-200 rounded-lg shadow-lg overflow-hidden animate-fade-in"
+              className="absolute right-0 mt-6 w-80 overflow-hidden"
+              style={{
+                borderRadius: "16px",
+              }}
             >
-              <div className="px-3 py-2 border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-500 bg-gray-50">
-                Wallet
-              </div>
-              <button
-                role="menuitem"
-                onClick={handleCopy}
-                className="w-full flex justify-between items-center px-3 py-2 text-sm hover:bg-green-50 text-gray-700"
-              >
-                Copy Address
-                <span className="text-[11px] text-gray-400">⌘C</span>
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => {
-                  disconnect();
-                  setOpen(false);
-                  setFeedback("Disconnected");
+              <div
+                className="px-6 py-4 text-center font-semibold text-white shadow-md"
+                style={{
+                  backgroundColor: "#0FA958",
+                  borderRadius: "20px",
+                  fontSize: "15px",
+                  marginBottom: "16px",
+                  boxShadow: "0 3px 10px rgba(15, 169, 88, 0.25)",
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
               >
-                Disconnect
-              </button>
+                Connected Account
+              </div>
+              <div className="space-y-4">
+                <button
+                  role="menuitem"
+                  onClick={handleCopy}
+                  className="w-full px-6 py-4 font-semibold text-white transition-all duration-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{
+                    backgroundColor: "#0FA958",
+                    borderRadius: "16px",
+                    fontSize: "15px",
+                    boxShadow: "0 2px 8px rgba(15, 169, 88, 0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#0D8A4A";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(15, 169, 88, 0.35)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#0FA958";
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(15, 169, 88, 0.2)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  Copy Address
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    disconnect();
+                    setOpen(false);
+                    setFeedback("Disconnected");
+                  }}
+                  className="w-full px-6 py-4 font-semibold text-white transition-all duration-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+                  style={{
+                    backgroundColor: "#EF4444",
+                    borderRadius: "16px",
+                    fontSize: "15px",
+                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.2)",
+                    marginTop: "12px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#DC2626";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(239, 68, 68, 0.35)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#EF4444";
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(239, 68, 68, 0.2)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  Disconnect
+                </button>
+              </div>
             </div>
           )}
         </div>

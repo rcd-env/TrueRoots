@@ -1,0 +1,9 @@
+#pragma version 10
+#pragma typetrack false
+
+// smart_contracts/true_roots/contract.algo.ts::TrueRoots.clearStateProgram() -> uint64:
+main:
+    // smart_contracts/true_roots/contract.algo.ts:183
+    // return true;
+    pushint 1 // 1
+    return

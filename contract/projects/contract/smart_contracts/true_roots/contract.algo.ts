@@ -8,6 +8,7 @@ export const STATUS_QC_PENDING = Bytes("QC_PENDING");
 export const STATUS_QC_VERIFIED = Bytes("QC_VERIFIED");
 export const STATUS_PROCESSED = Bytes("PROCESSED");
 export const STATUS_SHIPPED = Bytes("SHIPPED");
+export const STATUS_INIT = Bytes("INITIALIZED");
 
 // Error codes (short to save bytes in TEAL logs)
 const ERR_NOT_ADMIN = "E_ADMIN";
@@ -65,7 +66,8 @@ export class TrueRoots extends Contract {
     this.reward_asa.value = rewardAsa;
     this.base_reward.value = baseReward;
     this.reward_done.value = Uint64(0);
-    this.status.value = STATUS_QC_PENDING;
+    // Contract is now initialized and ready to accept batches
+    this.status.value = STATUS_INIT;
   }
 
   // -------------------------------
@@ -177,7 +179,7 @@ export class TrueRoots extends Contract {
   }
 
   // Clear state approval (allow clear) - no custom logic
-  clearStateProgram(): boolean | uint64 {
+  clearStateProgram(): boolean {
     return true;
   }
 }
