@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { PeraWalletConnect } from '@perawallet/connect';
+import React, { useState, useEffect } from "react";
+// NOTE: This component is now considered LEGACY. A new context-driven implementation
+// using `PeraWalletProvider` and `PeraWalletButton` has been added under `src/wallet/` and
+// `components/PeraWalletButton.tsx`. Prefer those for future development.
+import { PeraWalletConnect } from "@perawallet/connect";
 
 // Initialize Pera Wallet Connect instance
 const peraWallet = new PeraWalletConnect();
@@ -22,14 +25,14 @@ interface WalletState {
 const WalletConnect: React.FC<WalletConnectProps> = ({
   onConnect,
   onDisconnect,
-  className = ''
+  className = "",
 }) => {
   // State management for wallet connection
   const [walletState, setWalletState] = useState<WalletState>({
     isConnected: false,
     accountAddress: null,
     isConnecting: false,
-    error: null
+    error: null,
   });
 
   /**
@@ -38,7 +41,7 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
    * @returns Truncated address (e.g., "FG4E...JK8L")
    */
   const truncateAddress = (address: string): string => {
-    if (!address) return '';
+    if (!address) return "";
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
@@ -49,56 +52,56 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   const handleConnect = async (): Promise<void> => {
     try {
       // Set connecting state
-      setWalletState(prev => ({
+      setWalletState((prev) => ({
         ...prev,
         isConnecting: true,
-        error: null
+        error: null,
       }));
 
-      console.log('Initiating wallet connection...');
+      console.log("Initiating wallet connection...");
 
       // Request connection to Pera Wallet
       const newAccounts = await peraWallet.connect();
-      
+
       if (newAccounts && newAccounts.length > 0) {
         const accountAddress = newAccounts[0];
-        
-        console.log('Wallet connected successfully:', accountAddress);
+
+        console.log("Wallet connected successfully:", accountAddress);
 
         // Update state with connected wallet
         setWalletState({
           isConnected: true,
           accountAddress,
           isConnecting: false,
-          error: null
+          error: null,
         });
 
         // Call optional callback
         onConnect?.(accountAddress);
       } else {
-        throw new Error('No accounts returned from wallet');
+        throw new Error("No accounts returned from wallet");
       }
     } catch (error) {
-      console.error('Wallet connection failed:', error);
-      
-      let errorMessage = 'Failed to connect wallet';
-      
+      console.error("Wallet connection failed:", error);
+
+      let errorMessage = "Failed to connect wallet";
+
       // Handle specific error types
       if (error instanceof Error) {
-        if (error.message.includes('User rejected')) {
-          errorMessage = 'Connection rejected by user';
-        } else if (error.message.includes('No accounts')) {
-          errorMessage = 'No accounts found in wallet';
+        if (error.message.includes("User rejected")) {
+          errorMessage = "Connection rejected by user";
+        } else if (error.message.includes("No accounts")) {
+          errorMessage = "No accounts found in wallet";
         } else {
           errorMessage = error.message;
         }
       }
 
       // Update state with error
-      setWalletState(prev => ({
+      setWalletState((prev) => ({
         ...prev,
         isConnecting: false,
-        error: errorMessage
+        error: errorMessage,
       }));
     }
   };
@@ -109,25 +112,25 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
    */
   const handleDisconnect = (): void => {
     try {
-      console.log('Disconnecting wallet...');
-      
+      console.log("Disconnecting wallet...");
+
       // Disconnect from Pera Wallet
       peraWallet.disconnect();
-      
+
       // Reset wallet state
       setWalletState({
         isConnected: false,
         accountAddress: null,
         isConnecting: false,
-        error: null
+        error: null,
       });
 
       // Call optional callback
       onDisconnect?.();
-      
-      console.log('Wallet disconnected successfully');
+
+      console.log("Wallet disconnected successfully");
     } catch (error) {
-      console.error('Error during wallet disconnection:', error);
+      console.error("Error during wallet disconnection:", error);
     }
   };
 
@@ -135,9 +138,9 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
    * Clears any existing error messages
    */
   const clearError = (): void => {
-    setWalletState(prev => ({
+    setWalletState((prev) => ({
       ...prev,
-      error: null
+      error: null,
     }));
   };
 
@@ -148,31 +151,31 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   useEffect(() => {
     const checkExistingConnection = async (): Promise<void> => {
       try {
-        console.log('Checking for existing wallet connection...');
-        
+        console.log("Checking for existing wallet connection...");
+
         // Check if wallet is already connected
         const connectedAccounts = peraWallet.connector?.accounts;
-        
+
         if (connectedAccounts && connectedAccounts.length > 0) {
           const accountAddress = connectedAccounts[0];
-          
-          console.log('Existing connection found:', accountAddress);
-          
+
+          console.log("Existing connection found:", accountAddress);
+
           // Restore connection state
           setWalletState({
             isConnected: true,
             accountAddress,
             isConnecting: false,
-            error: null
+            error: null,
           });
 
           // Call optional callback
           onConnect?.(accountAddress);
         } else {
-          console.log('No existing connection found');
+          console.log("No existing connection found");
         }
       } catch (error) {
-        console.error('Error checking existing connection:', error);
+        console.error("Error checking existing connection:", error);
       }
     };
 
@@ -180,22 +183,22 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
 
     // Set up event listener for wallet disconnection
     const handleWalletDisconnect = (): void => {
-      console.log('Wallet disconnected via event');
+      console.log("Wallet disconnected via event");
       setWalletState({
         isConnected: false,
         accountAddress: null,
         isConnecting: false,
-        error: null
+        error: null,
       });
       onDisconnect?.();
     };
 
     // Listen for disconnect events
-    peraWallet.connector?.on('disconnect', handleWalletDisconnect);
+    peraWallet.connector?.on("disconnect", handleWalletDisconnect);
 
     // Cleanup event listener on component unmount
     return () => {
-      peraWallet.connector?.off('disconnect');
+      peraWallet.connector?.off("disconnect");
     };
   }, [onConnect, onDisconnect]);
 
@@ -226,9 +229,10 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
             disabled={walletState.isConnecting}
             className={`
               px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200
-              ${walletState.isConnecting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+              ${
+                walletState.isConnecting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
               }
               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
               disabled:opacity-50 disabled:cursor-not-allowed
@@ -241,8 +245,16 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <span>Connect Wallet</span>
               </div>
@@ -254,8 +266,16 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
             {/* Wallet Icon */}
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
             </div>
@@ -264,7 +284,7 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">Connected</p>
               <p className="text-sm text-gray-500 font-mono">
-                {truncateAddress(walletState.accountAddress || '')}
+                {truncateAddress(walletState.accountAddress || "")}
               </p>
             </div>
 
@@ -282,10 +302,9 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
       {/* Connection Status Info */}
       <div className="mt-3 text-center">
         <p className="text-xs text-gray-500">
-          {walletState.isConnected 
-            ? '🟢 Wallet connected securely' 
-            : '🔴 No wallet connected'
-          }
+          {walletState.isConnected
+            ? "🟢 Wallet connected securely"
+            : "🔴 No wallet connected"}
         </p>
       </div>
     </div>

@@ -1,32 +1,32 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  Leaf, 
-  Menu, 
-  X, 
-  Smartphone, 
-  Building2, 
-  FlaskConical, 
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Leaf,
+  Menu,
+  X,
+  Smartphone,
+  Building2,
+  FlaskConical,
   QrCode,
-  Home
-} from 'lucide-react';
-import Button from '../ui/Button';
+  Home,
+} from "lucide-react";
+import Button from "../ui/Button";
 
 const Navigation: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: 'Home', icon: Home },
-    { path: '/collector', label: 'Collector', icon: Smartphone },
-    { path: '/enterprise', label: 'Enterprise', icon: Building2 },
-    { path: '/lab', label: 'Lab Portal', icon: FlaskConical },
-    { path: '/scan', label: 'Scan QR', icon: QrCode },
+    { path: "/", label: "Home", icon: Home },
+    { path: "/collector", label: "Collector", icon: Smartphone },
+    { path: "/enterprise", label: "Enterprise", icon: Building2 },
+    { path: "/lab", label: "Lab Portal", icon: FlaskConical },
+    { path: "/scan", label: "Scan QR", icon: QrCode },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
+    if (path === "/") {
+      return location.pathname === "/";
     }
     return location.pathname.startsWith(path);
   };
@@ -57,8 +57,8 @@ const Navigation: React.FC = () => {
                   to={item.path}
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                     isActive(item.path)
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-gray-600 hover:text-primary-600 hover:bg-gray-50"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -76,7 +76,11 @@ const Navigation: React.FC = () => {
               onClick={() => setIsOpen(!isOpen)}
               className="p-2"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </Button>
           </div>
         </div>
@@ -95,8 +99,8 @@ const Navigation: React.FC = () => {
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                     isActive(item.path)
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-gray-600 hover:text-primary-600 hover:bg-gray-50"
                   }`}
                 >
                   <Icon className="w-5 h-5" />

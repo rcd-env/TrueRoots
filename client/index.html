@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,7 +7,13 @@
     <title>TrueRoots - Ayurvedic Herb Traceability</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Debug marker: if you can see this text in the DOM before hydration, HTML served correctly -->
+    <div id="root">Loading App...</div>
+    <noscript
+      ><div style="padding: 1rem; font-family: monospace; color: #b91c1c">
+        JavaScript disabled – enable it to load the TrueRoots app.
+      </div></noscript
+    >
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
