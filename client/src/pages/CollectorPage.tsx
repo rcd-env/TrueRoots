@@ -36,10 +36,13 @@ const identifyPlantWithBackend = async (
 
   try {
     console.log("🚀 Sending request to backend...");
-    const response = await fetch("http://localhost:8080/api/plant-identify", {
-      method: "POST",
-      body: formData,
-    });
+    const response = await fetch(
+      "https://trueroots.onrender.com/api/plant-identify",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
     console.log("📡 Response status:", response.status);
 
@@ -696,7 +699,7 @@ const CollectorPage = () => {
 
           // Call backend payment API
           const paymentResponse = await fetch(
-            "http://localhost:8080/api/payments/collector-payment",
+            "https://trueroots.onrender.com/api/payments/collector-payment",
             {
               method: "POST",
               headers: {
@@ -751,7 +754,7 @@ const CollectorPage = () => {
               "🔧 Network Error: Server not reachable or CORS issue"
             );
             console.error(
-              "🔧 Make sure server is running on http://localhost:3001"
+              "🔧 Make sure server is running on https://trueroots.onrender.com"
             );
           }
 
