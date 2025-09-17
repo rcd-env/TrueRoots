@@ -11,7 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Language-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
 
-[🚀 Live Demo](#) • [📱 Smart Contract](https://testnet.explorer.perawallet.app/application/745905580/) • [📖 Documentation](#getting-started)
+[🚀 Live Demo](https://true-roots.vercel.app) • [📱 Smart Contract](https://testnet.explorer.perawallet.app/application/745905580/) • [📖 Documentation](#getting-started)
 
 </div>
 
@@ -156,7 +156,7 @@ Before you begin, ensure you have the following installed:
 5. **Open in Browser**
    ```
    Frontend: http://localhost:5173
-   Backend:  http://localhost:3001
+   Backend:  http://localhost:8080
    ```
 
 ---
@@ -231,26 +231,6 @@ Verify Authenticity → Make Informed Purchase
 
 ---
 
-## 🎨 Screenshots
-
-<div align="center">
-
-### Collector Dashboard
-
-![Collector Dashboard](./docs/images/collector-dashboard.png)
-
-### Provenance Tracking
-
-![Provenance View](./docs/images/provenance-view.png)
-
-### QR Code Scanner
-
-![QR Scanner](./docs/images/qr-scanner.png)
-
-</div>
-
----
-
 ## 🧪 Testing
 
 ### **Run Frontend Tests**
@@ -297,7 +277,7 @@ npm run test:e2e
 
 ### **Backend (Render)**
 
-- **API URL**: `https://trueroots.onrender.com`
+- **API URL**: `https://trueroots.onrender.com/`
 - **Health Check**: `/health` endpoint
 - **Auto-scaling**: Enabled based on traffic
 
