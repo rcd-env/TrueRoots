@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Building2,
   Package,
@@ -17,8 +17,8 @@ import {
   Globe,
   Star,
   Award,
-  Truck
-} from 'lucide-react';
+  Truck,
+} from "lucide-react";
 
 interface BatchData {
   id: string;
@@ -30,7 +30,7 @@ interface BatchData {
   quantity: number;
   unit: string;
   price: number;
-  status: 'verified' | 'pending' | 'rejected' | 'shipped' | 'delivered';
+  status: "verified" | "pending" | "rejected" | "shipped" | "delivered";
   qualityScore: number;
   rarity: string;
   labTested: boolean;
@@ -39,42 +39,199 @@ interface BatchData {
   estimatedDelivery?: string;
 }
 
+interface HerbRequirement {
+  id: string;
+  herbName: string;
+  scientificName: string;
+  requiredQuantity: number;
+  unit: string;
+  priority: "high" | "medium" | "low";
+  description?: string;
+  currentQuantity: number;
+  fulfillmentStatus: "not-started" | "partial" | "fulfilled" | "exceeded";
+  dateAdded: string;
+  targetDate?: string;
+}
+
 const EnterprisePage = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  // Mock herb requirements data
+  const mockHerbRequirements: HerbRequirement[] = [
+    {
+      id: "REQ001",
+      herbName: "Ashwagandha",
+      scientificName: "Withania somnifera",
+      requiredQuantity: 100,
+      unit: "kg",
+      priority: "high",
+      description: "For premium supplement line production",
+      currentQuantity: 75,
+      fulfillmentStatus: "partial",
+      dateAdded: "2024-09-01",
+      targetDate: "2024-10-15",
+    },
+    {
+      id: "REQ002",
+      herbName: "Turmeric",
+      scientificName: "Curcuma longa",
+      requiredQuantity: 200,
+      unit: "kg",
+      priority: "medium",
+      description: "For spice blend production",
+      currentQuantity: 250,
+      fulfillmentStatus: "exceeded",
+      dateAdded: "2024-08-15",
+      targetDate: "2024-09-30",
+    },
+    {
+      id: "REQ003",
+      herbName: "Brahmi",
+      scientificName: "Bacopa monnieri",
+      requiredQuantity: 50,
+      unit: "kg",
+      priority: "high",
+      description: "For cognitive enhancement formulation",
+      currentQuantity: 0,
+      fulfillmentStatus: "not-started",
+      dateAdded: "2024-09-10",
+      targetDate: "2024-11-01",
+    },
+    {
+      id: "REQ004",
+      herbName: "Neem",
+      scientificName: "Azadirachta indica",
+      requiredQuantity: 80,
+      unit: "kg",
+      priority: "low",
+      description: "For organic pesticide production",
+      currentQuantity: 80,
+      fulfillmentStatus: "fulfilled",
+      dateAdded: "2024-08-01",
+      targetDate: "2024-09-15",
+    },
+  ];
+
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState<BatchData | null>(null);
   const [showBatchModal, setShowBatchModal] = useState(false);
 
-  // Export functionality
+  // Herb Requirements State
+  const [herbRequirements, setHerbRequirements] =
+    useState<HerbRequirement[]>(mockHerbRequirements);
+  const [showRequirementForm, setShowRequirementForm] = useState(false);
+  const [editingRequirement, setEditingRequirement] =
+    useState<HerbRequirement | null>(null);
+
+  // Herb requirement functions
+  const addHerbRequirement = (
+    requirementData: Omit<
+      HerbRequirement,
+      "id" | "currentQuantity" | "fulfillmentStatus" | "dateAdded"
+    >
+  ) => {
+    const newRequirement: HerbRequirement = {
+      ...requirementData,
+      id: `REQ${Date.now()}`,
+      currentQuantity: 0,
+      fulfillmentStatus: "not-started",
+      dateAdded: new Date().toISOString().split("T")[0],
+    };
+    setHerbRequirements((prev) => [...prev, newRequirement]);
+    setShowRequirementForm(false);
+  };
+
+  const updateHerbRequirement = (
+    id: string,
+    updates: Partial<HerbRequirement>
+  ) => {
+    setHerbRequirements((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, ...updates } : req))
+    );
+  };
+
+  const deleteHerbRequirement = (id: string) => {
+    if (confirm("Are you sure you want to delete this requirement?")) {
+      setHerbRequirements((prev) => prev.filter((req) => req.id !== id));
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return { bg: "#fef2f2", text: "#dc2626", border: "#fca5a5" };
+      case "medium":
+        return { bg: "#fef3c7", text: "#d97706", border: "#fcd34d" };
+      case "low":
+        return { bg: "#f0fdf4", text: "#059669", border: "#bbf7d0" };
+      default:
+        return { bg: "#f9fafb", text: "#6b7280", border: "#d1d5db" };
+    }
+  };
+
+  const getFulfillmentColor = (status: string) => {
+    switch (status) {
+      case "fulfilled":
+        return { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" };
+      case "exceeded":
+        return { bg: "#f0f9ff", text: "#1e40af", border: "#93c5fd" };
+      case "partial":
+        return { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" };
+      case "not-started":
+        return { bg: "#fef2f2", text: "#dc2626", border: "#fca5a5" };
+      default:
+        return { bg: "#f9fafb", text: "#6b7280", border: "#d1d5db" };
+    }
+  };
   const exportBatchData = () => {
     const csvContent = [
-      ['Batch ID', 'Herb Name', 'Scientific Name', 'Collector', 'Date', 'Location', 'Quantity', 'Unit', 'Price (ALGO)', 'Status', 'Quality Score', 'Rarity', 'Lab Tested', 'Enterprise', 'Destination'].join(','),
-      ...filteredBatches.map(batch => [
-        batch.id,
-        batch.herbName,
-        batch.scientificName,
-        batch.collectorName,
-        batch.collectionDate,
-        batch.location,
-        batch.quantity,
-        batch.unit,
-        batch.price,
-        batch.status,
-        batch.qualityScore,
-        batch.rarity,
-        batch.labTested ? 'Yes' : 'No',
-        batch.enterprise,
-        batch.destination
-      ].join(','))
-    ].join('\n');
+      [
+        "Batch ID",
+        "Herb Name",
+        "Scientific Name",
+        "Collector",
+        "Date",
+        "Location",
+        "Quantity",
+        "Unit",
+        "Price (ALGO)",
+        "Status",
+        "Quality Score",
+        "Rarity",
+        "Lab Tested",
+        "Enterprise",
+        "Destination",
+      ].join(","),
+      ...filteredBatches.map((batch) =>
+        [
+          batch.id,
+          batch.herbName,
+          batch.scientificName,
+          batch.collectorName,
+          batch.collectionDate,
+          batch.location,
+          batch.quantity,
+          batch.unit,
+          batch.price,
+          batch.status,
+          batch.qualityScore,
+          batch.rarity,
+          batch.labTested ? "Yes" : "No",
+          batch.enterprise,
+          batch.destination,
+        ].join(",")
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `enterprise_batches_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `enterprise_batches_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,181 +250,259 @@ const EnterprisePage = () => {
     totalRevenue: 45680,
     qualityScore: 94.2,
     verifiedSuppliers: 156,
-    pendingOrders: 23
+    pendingOrders: 23,
   };
 
   const recentBatches: BatchData[] = [
     {
-      id: 'TR240916001',
-      herbName: 'Ashwagandha',
-      scientificName: 'Withania somnifera',
-      collectorName: 'Rajesh Kumar',
-      collectionDate: '2024-09-15',
-      location: 'Uttarakhand, India',
+      id: "TR240916001",
+      herbName: "Ashwagandha",
+      scientificName: "Withania somnifera",
+      collectorName: "Rajesh Kumar",
+      collectionDate: "2024-09-15",
+      location: "Uttarakhand, India",
       quantity: 2.5,
-      unit: 'kg',
+      unit: "kg",
       price: 25,
-      status: 'verified',
+      status: "verified",
       qualityScore: 96,
-      rarity: 'Uncommon',
+      rarity: "Uncommon",
       labTested: true,
-      enterprise: 'Himalayan Herbs Co.',
-      destination: 'Mumbai, India'
+      enterprise: "Himalayan Herbs Co.",
+      destination: "Mumbai, India",
     },
     {
-      id: 'TR240916002',
-      herbName: 'Turmeric',
-      scientificName: 'Curcuma longa',
-      collectorName: 'Priya Sharma',
-      collectionDate: '2024-09-14',
-      location: 'Kerala, India',
+      id: "TR240916002",
+      herbName: "Turmeric",
+      scientificName: "Curcuma longa",
+      collectorName: "Priya Sharma",
+      collectionDate: "2024-09-14",
+      location: "Kerala, India",
       quantity: 5.0,
-      unit: 'kg',
+      unit: "kg",
       price: 8,
-      status: 'shipped',
+      status: "shipped",
       qualityScore: 92,
-      rarity: 'Common',
+      rarity: "Common",
       labTested: true,
-      enterprise: 'Spice Masters Ltd.',
-      destination: 'Delhi, India',
-      estimatedDelivery: '2024-09-18'
+      enterprise: "Spice Masters Ltd.",
+      destination: "Delhi, India",
+      estimatedDelivery: "2024-09-18",
     },
     {
-      id: 'TR240916003',
-      herbName: 'Brahmi',
-      scientificName: 'Bacopa monnieri',
-      collectorName: 'Amit Patel',
-      collectionDate: '2024-09-13',
-      location: 'Gujarat, India',
+      id: "TR240916003",
+      herbName: "Brahmi",
+      scientificName: "Bacopa monnieri",
+      collectorName: "Amit Patel",
+      collectionDate: "2024-09-13",
+      location: "Gujarat, India",
       quantity: 1.8,
-      unit: 'kg',
+      unit: "kg",
       price: 30,
-      status: 'pending',
+      status: "pending",
       qualityScore: 88,
-      rarity: 'Uncommon',
+      rarity: "Uncommon",
       labTested: false,
-      enterprise: 'Ayur Wellness Corp.',
-      destination: 'Bangalore, India'
+      enterprise: "Ayur Wellness Corp.",
+      destination: "Bangalore, India",
     },
     {
-      id: 'TR240916004',
-      herbName: 'Shatavari',
-      scientificName: 'Asparagus racemosus',
-      collectorName: 'Sunita Devi',
-      collectionDate: '2024-09-12',
-      location: 'Rajasthan, India',
+      id: "TR240916004",
+      herbName: "Shatavari",
+      scientificName: "Asparagus racemosus",
+      collectorName: "Sunita Devi",
+      collectionDate: "2024-09-12",
+      location: "Rajasthan, India",
       quantity: 3.2,
-      unit: 'kg',
+      unit: "kg",
       price: 45,
-      status: 'delivered',
+      status: "delivered",
       qualityScore: 98,
-      rarity: 'Rare',
+      rarity: "Rare",
       labTested: true,
-      enterprise: 'Premium Botanicals',
-      destination: 'Chennai, India'
+      enterprise: "Premium Botanicals",
+      destination: "Chennai, India",
     },
     {
-      id: 'TR240916005',
-      herbName: 'Neem',
-      scientificName: 'Azadirachta indica',
-      collectorName: 'Ravi Singh',
-      collectionDate: '2024-09-11',
-      location: 'Madhya Pradesh, India',
+      id: "TR240916005",
+      herbName: "Neem",
+      scientificName: "Azadirachta indica",
+      collectorName: "Ravi Singh",
+      collectionDate: "2024-09-11",
+      location: "Madhya Pradesh, India",
       quantity: 4.5,
-      unit: 'kg',
+      unit: "kg",
       price: 10,
-      status: 'rejected',
+      status: "rejected",
       qualityScore: 72,
-      rarity: 'Common',
+      rarity: "Common",
       labTested: true,
-      enterprise: 'Green Earth Solutions',
-      destination: 'Pune, India'
-    }
+      enterprise: "Green Earth Solutions",
+      destination: "Pune, India",
+    },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' };
-      case 'pending': return { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' };
-      case 'rejected': return { bg: '#fef2f2', text: '#dc2626', border: '#fca5a5' };
-      case 'shipped': return { bg: '#f0f9ff', text: '#1e40af', border: '#93c5fd' };
-      case 'delivered': return { bg: '#f3e8ff', text: '#7c3aed', border: '#c4b5fd' };
-      default: return { bg: '#f9fafb', text: '#6b7280', border: '#d1d5db' };
+      case "verified":
+        return { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" };
+      case "pending":
+        return { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" };
+      case "rejected":
+        return { bg: "#fef2f2", text: "#dc2626", border: "#fca5a5" };
+      case "shipped":
+        return { bg: "#f0f9ff", text: "#1e40af", border: "#93c5fd" };
+      case "delivered":
+        return { bg: "#f3e8ff", text: "#7c3aed", border: "#c4b5fd" };
+      default:
+        return { bg: "#f9fafb", text: "#6b7280", border: "#d1d5db" };
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'verified': return <CheckCircle size={14} />;
-      case 'pending': return <Clock size={14} />;
-      case 'rejected': return <XCircle size={14} />;
-      case 'shipped': return <Truck size={14} />;
-      case 'delivered': return <Award size={14} />;
-      default: return <AlertTriangle size={14} />;
+      case "verified":
+        return <CheckCircle size={14} />;
+      case "pending":
+        return <Clock size={14} />;
+      case "rejected":
+        return <XCircle size={14} />;
+      case "shipped":
+        return <Truck size={14} />;
+      case "delivered":
+        return <Award size={14} />;
+      default:
+        return <AlertTriangle size={14} />;
     }
   };
 
-  const filteredBatches = recentBatches.filter(batch => {
-    const matchesSearch = batch.herbName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         batch.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         batch.collectorName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
+  // Calculate fulfillment status based on available batches
+  const calculateFulfillmentStatus = (
+    requirement: HerbRequirement
+  ): HerbRequirement => {
+    // Find matching batches for this herb
+    const matchingBatches = recentBatches.filter(
+      (batch) =>
+        batch.herbName.toLowerCase() === requirement.herbName.toLowerCase() &&
+        (batch.status === "verified" || batch.status === "delivered")
+    );
+
+    // Calculate total available quantity
+    const totalAvailable = matchingBatches.reduce(
+      (sum, batch) => sum + batch.quantity,
+      0
+    );
+
+    // Determine fulfillment status
+    let fulfillmentStatus: "not-started" | "partial" | "fulfilled" | "exceeded";
+    if (totalAvailable === 0) {
+      fulfillmentStatus = "not-started";
+    } else if (totalAvailable < requirement.requiredQuantity) {
+      fulfillmentStatus = "partial";
+    } else if (
+      totalAvailable >= requirement.requiredQuantity &&
+      totalAvailable < requirement.requiredQuantity * 1.2
+    ) {
+      fulfillmentStatus = "fulfilled";
+    } else {
+      fulfillmentStatus = "exceeded";
+    }
+
+    return {
+      ...requirement,
+      currentQuantity: totalAvailable,
+      fulfillmentStatus,
+    };
+  };
+
+  // Update requirements with current fulfillment status
+  const updatedHerbRequirements = herbRequirements.map(
+    calculateFulfillmentStatus
+  );
+
+  const filteredBatches = recentBatches.filter((batch) => {
+    const matchesSearch =
+      batch.herbName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.collectorName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || batch.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
       {/* Header */}
-      <header style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #f3f4f6',
-        padding: '1rem 2rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10
-      }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h1 style={{
-              fontSize: '1.5rem',
-              fontFamily: 'Playfair Display, serif',
-              fontWeight: '700',
-              color: '#1a1a1a',
-              margin: 0
-            }}>
+      <header
+        style={{
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid #f3f4f6",
+          padding: "1rem 2rem",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1400px",
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontFamily: "Playfair Display, serif",
+                fontWeight: "700",
+                color: "#1a1a1a",
+                margin: 0,
+              }}
+            >
               Enterprise Dashboard
             </h1>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              backgroundColor: '#fef3c7',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div
+              style={{
+                backgroundColor: "#fef3c7",
+                padding: "0.5rem 1rem",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
               <Building2 size={16} color="#d97706" />
-              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#d97706' }}>
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#d97706",
+                }}
+              >
                 Enterprise Portal
               </span>
             </div>
             <button
               onClick={() => {
-                if (confirm('Are you sure you want to log out?')) {
-                  window.location.href = '/';
+                if (confirm("Are you sure you want to log out?")) {
+                  window.location.href = "/";
                 }
               }}
               style={{
-                backgroundColor: '#dc2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 1rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer'
+                backgroundColor: "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                cursor: "pointer",
               }}
             >
               Logout
@@ -277,35 +512,41 @@ const EnterprisePage = () => {
       </header>
 
       {/* Navigation Tabs */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #f3f4f6',
-        padding: '0 2rem'
-      }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <nav style={{ display: 'flex', gap: '2rem' }}>
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid #f3f4f6",
+          padding: "0 2rem",
+        }}
+      >
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          <nav style={{ display: "flex", gap: "2rem" }}>
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'batches', label: 'Batch Management', icon: Package },
-              { id: 'suppliers', label: 'Suppliers', icon: Users },
-              { id: 'analytics', label: 'Analytics', icon: TrendingUp }
-            ].map(tab => (
+              { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+              { id: "batches", label: "Batch Management", icon: Package },
+              { id: "requirements", label: "Herb Requirements", icon: Shield },
+              { id: "suppliers", label: "Suppliers", icon: Users },
+              { id: "analytics", label: "Analytics", icon: TrendingUp },
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '1rem 0',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: activeTab === tab.id ? '#d97706' : '#6b7280',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === tab.id ? '2px solid #d97706' : '2px solid transparent',
-                  transition: 'all 0.2s ease'
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "1rem 0",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  color: activeTab === tab.id ? "#d97706" : "#6b7280",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  borderBottom:
+                    activeTab === tab.id
+                      ? "2px solid #d97706"
+                      : "2px solid transparent",
+                  transition: "all 0.2s ease",
                 }}
               >
                 <tab.icon size={16} />
@@ -317,121 +558,217 @@ const EnterprisePage = () => {
       </div>
 
       {/* Main Content */}
-      <main style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          
-          {activeTab === 'dashboard' && (
+      <main style={{ padding: "2rem" }}>
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          {activeTab === "dashboard" && (
             <>
               {/* Stats Overview */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  border: '1px solid #f3f4f6',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '48px',
-                      height: '48px',
-                      backgroundColor: '#fef3c7',
-                      borderRadius: '12px'
-                    }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                  gap: "1.5rem",
+                  marginBottom: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "1.5rem",
+                    border: "1px solid #f3f4f6",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "48px",
+                        height: "48px",
+                        backgroundColor: "#fef3c7",
+                        borderRadius: "12px",
+                      }}
+                    >
                       <Package size={24} color="#d97706" />
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
                       TOTAL BATCHES
                     </span>
                   </div>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '0.25rem' }}>
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#1a1a1a",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     {enterpriseStats.totalBatches.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#059669', fontWeight: '500' }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#059669",
+                      fontWeight: "500",
+                    }}
+                  >
                     +12% from last month
                   </div>
                 </div>
 
-                <div style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  border: '1px solid #f3f4f6',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '48px',
-                      height: '48px',
-                      backgroundColor: '#f0fdf4',
-                      borderRadius: '12px'
-                    }}>
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "1.5rem",
+                    border: "1px solid #f3f4f6",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "48px",
+                        height: "48px",
+                        backgroundColor: "#f0fdf4",
+                        borderRadius: "12px",
+                      }}
+                    >
                       <TrendingUp size={24} color="#059669" />
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
                       REVENUE (ALGO)
                     </span>
                   </div>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: '#059669',
-                      borderRadius: '50%',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      color: 'white',
-                      fontWeight: '700'
-                    }}>
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#1a1a1a",
+                      marginBottom: "0.25rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        backgroundColor: "#059669",
+                        borderRadius: "50%",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        color: "white",
+                        fontWeight: "700",
+                      }}
+                    >
                       A
                     </span>
                     {enterpriseStats.totalRevenue.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#059669', fontWeight: '500' }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#059669",
+                      fontWeight: "500",
+                    }}
+                  >
                     +8% from last month
                   </div>
                 </div>
 
-                <div style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  border: '1px solid #f3f4f6',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '48px',
-                      height: '48px',
-                      backgroundColor: '#fef2f2',
-                      borderRadius: '12px'
-                    }}>
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "1.5rem",
+                    border: "1px solid #f3f4f6",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "48px",
+                        height: "48px",
+                        backgroundColor: "#fef2f2",
+                        borderRadius: "12px",
+                      }}
+                    >
                       <Star size={24} color="#dc2626" />
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
                       QUALITY SCORE
                     </span>
                   </div>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '0.25rem' }}>
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#1a1a1a",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     {enterpriseStats.qualityScore}%
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#059669', fontWeight: '500' }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#059669",
+                      fontWeight: "500",
+                    }}
+                  >
                     +2.1% from last month
                   </div>
                 </div>
@@ -439,36 +776,55 @@ const EnterprisePage = () => {
             </>
           )}
 
-          {activeTab === 'batches' && (
+          {activeTab === "batches" && (
             <>
               {/* Search and Filter */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                border: '1px solid #f3f4f6',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                marginBottom: '2rem'
-              }}>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ position: 'relative', flex: '1', minWidth: '300px' }}>
-                    <Search size={20} color="#6b7280" style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)'
-                    }} />
+              <div
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  border: "1px solid #f3f4f6",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  marginBottom: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "relative",
+                      flex: "1",
+                      minWidth: "300px",
+                    }}
+                  >
+                    <Search
+                      size={20}
+                      color="#6b7280"
+                      style={{
+                        position: "absolute",
+                        left: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    />
                     <input
                       type="text"
                       placeholder="Search batches, herbs, or collectors..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem'
+                        width: "100%",
+                        padding: "0.75rem 0.75rem 0.75rem 2.5rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
                       }}
                     />
                   </div>
@@ -477,11 +833,11 @@ const EnterprisePage = () => {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     style={{
-                      padding: '0.75rem 1rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      backgroundColor: '#ffffff'
+                      padding: "0.75rem 1rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      backgroundColor: "#ffffff",
                     }}
                   >
                     <option value="all">All Status</option>
@@ -495,26 +851,26 @@ const EnterprisePage = () => {
                   <button
                     onClick={exportBatchData}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: '#d97706',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.75rem 1rem",
+                      backgroundColor: "#d97706",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#b45309';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.backgroundColor = "#b45309";
+                      e.currentTarget.style.transform = "translateY(-1px)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#d97706';
-                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.backgroundColor = "#d97706";
+                      e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
                     <Download size={16} />
@@ -524,163 +880,316 @@ const EnterprisePage = () => {
               </div>
 
               {/* Batch Table */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                border: '1px solid #f3f4f6',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  padding: '1.5rem',
-                  borderBottom: '1px solid #f3f4f6',
-                  backgroundColor: '#f8fafc'
-                }}>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: '600',
-                    color: '#1a1a1a',
-                    margin: 0
-                  }}>
+              <div
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  border: "1px solid #f3f4f6",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    borderBottom: "1px solid #f3f4f6",
+                    backgroundColor: "#f8fafc",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: "1.125rem",
+                      fontWeight: "600",
+                      color: "#1a1a1a",
+                      margin: 0,
+                    }}
+                  >
                     Recent Batches ({filteredBatches.length})
                   </h3>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f8fafc' }}>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                      <tr style={{ backgroundColor: "#f8fafc" }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Batch ID
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Herb
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Collector
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Quantity
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Status
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Quality
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Price
                         </th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredBatches.map((batch, index) => (
-                        <tr key={batch.id} style={{
-                          borderBottom: index < filteredBatches.length - 1 ? '1px solid #f3f4f6' : 'none'
-                        }}>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a', fontFamily: 'monospace' }}>
+                        <tr
+                          key={batch.id}
+                          style={{
+                            borderBottom:
+                              index < filteredBatches.length - 1
+                                ? "1px solid #f3f4f6"
+                                : "none",
+                          }}
+                        >
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                                fontFamily: "monospace",
+                              }}
+                            >
                               {batch.id}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                              {new Date(batch.collectionDate).toLocaleDateString()}
+                            <div
+                              style={{ fontSize: "0.75rem", color: "#6b7280" }}
+                            >
+                              {new Date(
+                                batch.collectionDate
+                              ).toLocaleDateString()}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a' }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                              }}
+                            >
                               {batch.herbName}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            <div
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                fontStyle: "italic",
+                              }}
+                            >
                               {batch.scientificName}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1a1a1a' }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "500",
+                                color: "#1a1a1a",
+                              }}
+                            >
                               {batch.collectorName}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <div
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                              }}
+                            >
                               <MapPin size={12} />
                               {batch.location}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a' }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                              }}
+                            >
                               {batch.quantity} {batch.unit}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.25rem 0.75rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              backgroundColor: getStatusColor(batch.status).bg,
-                              color: getStatusColor(batch.status).text,
-                              border: `1px solid ${getStatusColor(batch.status).border}`
-                            }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                                padding: "0.25rem 0.75rem",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                backgroundColor: getStatusColor(batch.status)
+                                  .bg,
+                                color: getStatusColor(batch.status).text,
+                                border: `1px solid ${
+                                  getStatusColor(batch.status).border
+                                }`,
+                              }}
+                            >
                               {getStatusIcon(batch.status)}
-                              {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                              {batch.status.charAt(0).toUpperCase() +
+                                batch.status.slice(1)}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{
-                              fontSize: '0.875rem',
-                              fontWeight: '600',
-                              color: batch.qualityScore >= 95 ? '#059669' : batch.qualityScore >= 85 ? '#d97706' : '#dc2626'
-                            }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color:
+                                  batch.qualityScore >= 95
+                                    ? "#059669"
+                                    : batch.qualityScore >= 85
+                                    ? "#d97706"
+                                    : "#dc2626",
+                              }}
+                            >
                               {batch.qualityScore}%
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <span style={{
-                                width: '12px',
-                                height: '12px',
-                                backgroundColor: '#059669',
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '0.5rem',
-                                color: 'white',
-                                fontWeight: '700'
-                              }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: "12px",
+                                  height: "12px",
+                                  backgroundColor: "#059669",
+                                  borderRadius: "50%",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.5rem",
+                                  color: "white",
+                                  fontWeight: "700",
+                                }}
+                              >
                                 A
                               </span>
                               {batch.price}
                             </div>
                           </td>
-                          <td style={{ padding: '1rem' }}>
+                          <td style={{ padding: "1rem" }}>
                             <button
                               onClick={() => viewBatchDetails(batch)}
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.5rem',
-                                backgroundColor: 'transparent',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                fontSize: '0.75rem',
-                                color: '#6b7280',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                padding: "0.5rem",
+                                backgroundColor: "transparent",
+                                border: "1px solid #d1d5db",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#f3f4f6';
-                                e.currentTarget.style.borderColor = '#9ca3af';
-                                e.currentTarget.style.color = '#374151';
+                                e.currentTarget.style.backgroundColor =
+                                  "#f3f4f6";
+                                e.currentTarget.style.borderColor = "#9ca3af";
+                                e.currentTarget.style.color = "#374151";
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.borderColor = '#d1d5db';
-                                e.currentTarget.style.color = '#6b7280';
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
+                                e.currentTarget.style.borderColor = "#d1d5db";
+                                e.currentTarget.style.color = "#6b7280";
                               }}
                             >
                               <Eye size={14} />
@@ -696,69 +1205,645 @@ const EnterprisePage = () => {
             </>
           )}
 
-          {activeTab === 'suppliers' && (
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              padding: '3rem',
-              border: '1px solid #f3f4f6',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              textAlign: 'center'
-            }}>
-              <Users size={48} color="#d97706" style={{ margin: '0 auto 1rem auto' }} />
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
-                color: '#1a1a1a',
-                marginBottom: '0.5rem'
-              }}>
+          {activeTab === "requirements" && (
+            <>
+              {/* Requirements Header */}
+              <div
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  border: "1px solid #f3f4f6",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  marginBottom: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "600",
+                        color: "#1a1a1a",
+                        margin: 0,
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Herb Requirements
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        margin: 0,
+                      }}
+                    >
+                      Manage your herb procurement requirements and track
+                      fulfillment status
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowRequirementForm(true)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.75rem 1.5rem",
+                      backgroundColor: "#d97706",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#b45309";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#d97706";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    <Shield size={16} />
+                    Add Requirement
+                  </button>
+                </div>
+
+                {/* Quick Stats */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "700",
+                        color: "#d97706",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {updatedHerbRequirements.length}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                      Total Requirements
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "700",
+                        color: "#059669",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {
+                        updatedHerbRequirements.filter(
+                          (req) =>
+                            req.fulfillmentStatus === "fulfilled" ||
+                            req.fulfillmentStatus === "exceeded"
+                        ).length
+                      }
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                      Fulfilled
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "700",
+                        color: "#dc2626",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {
+                        updatedHerbRequirements.filter(
+                          (req) => req.priority === "high"
+                        ).length
+                      }
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                      High Priority
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "700",
+                        color: "#7c3aed",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {Math.round(
+                        (updatedHerbRequirements.filter(
+                          (req) =>
+                            req.fulfillmentStatus === "fulfilled" ||
+                            req.fulfillmentStatus === "exceeded"
+                        ).length /
+                          updatedHerbRequirements.length) *
+                          100
+                      )}
+                      %
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                      Completion Rate
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Requirements Table */}
+              <div
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  border: "1px solid #f3f4f6",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ backgroundColor: "#f8fafc" }}>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Herb
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Required Qty
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Current Qty
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Status
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Priority
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Target Date
+                        </th>
+                        <th
+                          style={{
+                            padding: "1rem",
+                            textAlign: "left",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {updatedHerbRequirements.map((requirement, index) => (
+                        <tr
+                          key={requirement.id}
+                          style={{
+                            borderBottom:
+                              index < updatedHerbRequirements.length - 1
+                                ? "1px solid #f3f4f6"
+                                : "none",
+                          }}
+                        >
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                              }}
+                            >
+                              {requirement.herbName}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {requirement.scientificName}
+                            </div>
+                            {requirement.description && (
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#6b7280",
+                                  marginTop: "0.25rem",
+                                }}
+                              >
+                                {requirement.description}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                              }}
+                            >
+                              {requirement.requiredQuantity} {requirement.unit}
+                            </div>
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                              }}
+                            >
+                              {requirement.currentQuantity} {requirement.unit}
+                            </div>
+                            <div
+                              style={{
+                                width: "100%",
+                                height: "4px",
+                                backgroundColor: "#f3f4f6",
+                                borderRadius: "2px",
+                                marginTop: "0.5rem",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${Math.min(
+                                    (requirement.currentQuantity /
+                                      requirement.requiredQuantity) *
+                                      100,
+                                    100
+                                  )}%`,
+                                  height: "100%",
+                                  backgroundColor:
+                                    requirement.fulfillmentStatus ===
+                                      "fulfilled" ||
+                                    requirement.fulfillmentStatus === "exceeded"
+                                      ? "#059669"
+                                      : requirement.fulfillmentStatus ===
+                                        "partial"
+                                      ? "#d97706"
+                                      : "#dc2626",
+                                  borderRadius: "2px",
+                                  transition: "width 0.3s ease",
+                                }}
+                              />
+                            </div>
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                padding: "0.25rem 0.75rem",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                backgroundColor: getFulfillmentColor(
+                                  requirement.fulfillmentStatus
+                                ).bg,
+                                color: getFulfillmentColor(
+                                  requirement.fulfillmentStatus
+                                ).text,
+                                border: `1px solid ${
+                                  getFulfillmentColor(
+                                    requirement.fulfillmentStatus
+                                  ).border
+                                }`,
+                              }}
+                            >
+                              {requirement.fulfillmentStatus === "fulfilled"
+                                ? "✓"
+                                : requirement.fulfillmentStatus === "exceeded"
+                                ? "↗"
+                                : requirement.fulfillmentStatus === "partial"
+                                ? "⧗"
+                                : "○"}
+                              {requirement.fulfillmentStatus
+                                .charAt(0)
+                                .toUpperCase() +
+                                requirement.fulfillmentStatus
+                                  .slice(1)
+                                  .replace("-", " ")}
+                            </div>
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                padding: "0.25rem 0.75rem",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                backgroundColor: getPriorityColor(
+                                  requirement.priority
+                                ).bg,
+                                color: getPriorityColor(requirement.priority)
+                                  .text,
+                                border: `1px solid ${
+                                  getPriorityColor(requirement.priority).border
+                                }`,
+                              }}
+                            >
+                              {requirement.priority === "high"
+                                ? "🔴"
+                                : requirement.priority === "medium"
+                                ? "🟡"
+                                : "🟢"}
+                              {requirement.priority.charAt(0).toUpperCase() +
+                                requirement.priority.slice(1)}
+                            </div>
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div
+                              style={{ fontSize: "0.875rem", color: "#1a1a1a" }}
+                            >
+                              {requirement.targetDate
+                                ? new Date(
+                                    requirement.targetDate
+                                  ).toLocaleDateString()
+                                : "No deadline"}
+                            </div>
+                          </td>
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                              <button
+                                onClick={() => {
+                                  setEditingRequirement(requirement);
+                                  setShowRequirementForm(true);
+                                }}
+                                style={{
+                                  padding: "0.375rem",
+                                  backgroundColor: "transparent",
+                                  border: "1px solid #d1d5db",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  color: "#6b7280",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "#f3f4f6";
+                                  e.currentTarget.style.borderColor = "#9ca3af";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                  e.currentTarget.style.borderColor = "#d1d5db";
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  deleteHerbRequirement(requirement.id)
+                                }
+                                style={{
+                                  padding: "0.375rem",
+                                  backgroundColor: "transparent",
+                                  border: "1px solid #fca5a5",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  color: "#dc2626",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "#fef2f2";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "suppliers" && (
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "16px",
+                padding: "3rem",
+                border: "1px solid #f3f4f6",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                textAlign: "center",
+              }}
+            >
+              <Users
+                size={48}
+                color="#d97706"
+                style={{ margin: "0 auto 1rem auto" }}
+              />
+              <h3
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "600",
+                  color: "#1a1a1a",
+                  marginBottom: "0.5rem",
+                }}
+              >
                 Supplier Management
               </h3>
-              <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '2rem' }}>
+              <p
+                style={{
+                  fontSize: "1rem",
+                  color: "#6b7280",
+                  marginBottom: "2rem",
+                }}
+              >
                 Manage your network of verified herb collectors and suppliers
               </p>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1rem',
-                marginTop: '2rem'
-              }}>
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#d97706', marginBottom: '0.5rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "1rem",
+                  marginTop: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#d97706",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     {enterpriseStats.verifiedSuppliers}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                     Verified Suppliers
                   </div>
                 </div>
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#059669', marginBottom: '0.5rem' }}>
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#059669",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     4.8
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                     Average Rating
                   </div>
                 </div>
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ fontSize: '2rem', fontWeight: '700', color: '#7c3aed', marginBottom: '0.5rem' }}>
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "700",
+                      color: "#7c3aed",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     {enterpriseStats.activeBatches}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                     Active Collections
                   </div>
                 </div>
@@ -766,92 +1851,174 @@ const EnterprisePage = () => {
             </div>
           )}
 
-          {activeTab === 'analytics' && (
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              padding: '3rem',
-              border: '1px solid #f3f4f6',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              textAlign: 'center'
-            }}>
-              <BarChart3 size={48} color="#7c3aed" style={{ margin: '0 auto 1rem auto' }} />
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
-                color: '#1a1a1a',
-                marginBottom: '0.5rem'
-              }}>
+          {activeTab === "analytics" && (
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "16px",
+                padding: "3rem",
+                border: "1px solid #f3f4f6",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                textAlign: "center",
+              }}
+            >
+              <BarChart3
+                size={48}
+                color="#7c3aed"
+                style={{ margin: "0 auto 1rem auto" }}
+              />
+              <h3
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "600",
+                  color: "#1a1a1a",
+                  marginBottom: "0.5rem",
+                }}
+              >
                 Advanced Analytics
               </h3>
-              <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '2rem' }}>
+              <p
+                style={{
+                  fontSize: "1rem",
+                  color: "#6b7280",
+                  marginBottom: "2rem",
+                }}
+              >
                 Comprehensive insights into your supply chain performance
               </p>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1.5rem',
-                marginTop: '2rem'
-              }}>
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                  gap: "1.5rem",
+                  marginTop: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
                     <TrendingUp size={20} color="#059669" />
-                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a' }}>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#1a1a1a",
+                      }}
+                    >
                       Revenue Growth
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669', marginBottom: '0.25rem' }}>
+                  <div
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "700",
+                      color: "#059669",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     +24.5%
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                     Compared to last quarter
                   </div>
                 </div>
 
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
                     <Shield size={20} color="#d97706" />
-                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a' }}>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#1a1a1a",
+                      }}
+                    >
                       Quality Improvement
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706', marginBottom: '0.25rem' }}>
+                  <div
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "700",
+                      color: "#d97706",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     +12.3%
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                     Average quality score increase
                   </div>
                 </div>
 
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
                     <Globe size={20} color="#7c3aed" />
-                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1a1a1a' }}>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#1a1a1a",
+                      }}
+                    >
                       Market Expansion
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#7c3aed', marginBottom: '0.25rem' }}>
+                  <div
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "700",
+                      color: "#7c3aed",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     8 Regions
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                     New markets entered
                   </div>
                 </div>
@@ -863,240 +2030,830 @@ const EnterprisePage = () => {
 
       {/* Batch Details Modal */}
       {showBatchModal && selectedBatch && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '2rem'
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '100%',
-            maxHeight: '80vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1a1a1a', margin: 0 }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "2rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              padding: "2rem",
+              maxWidth: "600px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflow: "auto",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "700",
+                  color: "#1a1a1a",
+                  margin: 0,
+                }}
+              >
                 Batch Details
               </h3>
               <button
                 onClick={() => setShowBatchModal(false)}
                 style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  padding: '0.5rem',
-                  borderRadius: '8px'
+                  backgroundColor: "transparent",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  padding: "0.5rem",
+                  borderRadius: "8px",
                 }}
               >
                 ×
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: "grid", gap: "1rem" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Batch ID
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a', fontFamily: 'monospace', backgroundColor: '#f9fafb', padding: '0.5rem', borderRadius: '6px' }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#1a1a1a",
+                      fontFamily: "monospace",
+                      backgroundColor: "#f9fafb",
+                      padding: "0.5rem",
+                      borderRadius: "6px",
+                    }}
+                  >
                     {selectedBatch.id}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Status
                   </label>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    backgroundColor: selectedBatch.status === 'verified' ? '#f0fdf4' :
-                                   selectedBatch.status === 'pending' ? '#fef3c7' :
-                                   selectedBatch.status === 'shipped' ? '#eff6ff' :
-                                   selectedBatch.status === 'delivered' ? '#f0f9ff' : '#fef2f2',
-                    color: selectedBatch.status === 'verified' ? '#166534' :
-                           selectedBatch.status === 'pending' ? '#92400e' :
-                           selectedBatch.status === 'shipped' ? '#1e40af' :
-                           selectedBatch.status === 'delivered' ? '#0369a1' : '#dc2626'
-                  }}>
-                    {selectedBatch.status.charAt(0).toUpperCase() + selectedBatch.status.slice(1)}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "12px",
+                      fontSize: "0.75rem",
+                      fontWeight: "600",
+                      backgroundColor:
+                        selectedBatch.status === "verified"
+                          ? "#f0fdf4"
+                          : selectedBatch.status === "pending"
+                          ? "#fef3c7"
+                          : selectedBatch.status === "shipped"
+                          ? "#eff6ff"
+                          : selectedBatch.status === "delivered"
+                          ? "#f0f9ff"
+                          : "#fef2f2",
+                      color:
+                        selectedBatch.status === "verified"
+                          ? "#166534"
+                          : selectedBatch.status === "pending"
+                          ? "#92400e"
+                          : selectedBatch.status === "shipped"
+                          ? "#1e40af"
+                          : selectedBatch.status === "delivered"
+                          ? "#0369a1"
+                          : "#dc2626",
+                    }}
+                  >
+                    {selectedBatch.status.charAt(0).toUpperCase() +
+                      selectedBatch.status.slice(1)}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Herb Name
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.herbName}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#6b7280",
+                      fontStyle: "italic",
+                    }}
+                  >
                     {selectedBatch.scientificName}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Quality Score
                   </label>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700', color: selectedBatch.qualityScore >= 95 ? '#059669' : selectedBatch.qualityScore >= 85 ? '#d97706' : '#dc2626' }}>
+                  <div
+                    style={{
+                      fontSize: "1.25rem",
+                      fontWeight: "700",
+                      color:
+                        selectedBatch.qualityScore >= 95
+                          ? "#059669"
+                          : selectedBatch.qualityScore >= 85
+                          ? "#d97706"
+                          : "#dc2626",
+                    }}
+                  >
                     {selectedBatch.qualityScore}%
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Collector
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.collectorName}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Collection Date
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.collectionDate}
                   </div>
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                <label
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: "0.25rem",
+                  }}
+                >
                   Location
                 </label>
-                <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                   {selectedBatch.location}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Quantity
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.quantity} {selectedBatch.unit}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Price
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span style={{ fontWeight: '700' }}>A</span>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#1a1a1a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                    }}
+                  >
+                    <span style={{ fontWeight: "700" }}>A</span>
                     {selectedBatch.price}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Rarity
                   </label>
-                  <div style={{
-                    display: 'inline-block',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    backgroundColor: selectedBatch.rarity === 'Common' ? '#f0fdf4' :
-                                   selectedBatch.rarity === 'Uncommon' ? '#fef3c7' :
-                                   selectedBatch.rarity === 'Rare' ? '#fdf2f8' :
-                                   selectedBatch.rarity === 'Very Rare' ? '#f3e8ff' : '#fef2f2',
-                    color: selectedBatch.rarity === 'Common' ? '#166534' :
-                           selectedBatch.rarity === 'Uncommon' ? '#92400e' :
-                           selectedBatch.rarity === 'Rare' ? '#be185d' :
-                           selectedBatch.rarity === 'Very Rare' ? '#7c3aed' : '#dc2626'
-                  }}>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: "600",
+                      backgroundColor:
+                        selectedBatch.rarity === "Common"
+                          ? "#f0fdf4"
+                          : selectedBatch.rarity === "Uncommon"
+                          ? "#fef3c7"
+                          : selectedBatch.rarity === "Rare"
+                          ? "#fdf2f8"
+                          : selectedBatch.rarity === "Very Rare"
+                          ? "#f3e8ff"
+                          : "#fef2f2",
+                      color:
+                        selectedBatch.rarity === "Common"
+                          ? "#166534"
+                          : selectedBatch.rarity === "Uncommon"
+                          ? "#92400e"
+                          : selectedBatch.rarity === "Rare"
+                          ? "#be185d"
+                          : selectedBatch.rarity === "Very Rare"
+                          ? "#7c3aed"
+                          : "#dc2626",
+                    }}
+                  >
                     {selectedBatch.rarity}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Enterprise
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.enterprise}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Lab Tested
                   </label>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    fontSize: '0.875rem',
-                    color: selectedBatch.labTested ? '#059669' : '#dc2626'
-                  }}>
-                    {selectedBatch.labTested ? '✓ Yes' : '✗ No'}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                      fontSize: "0.875rem",
+                      color: selectedBatch.labTested ? "#059669" : "#dc2626",
+                    }}
+                  >
+                    {selectedBatch.labTested ? "✓ Yes" : "✗ No"}
                   </div>
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                <label
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: "0.25rem",
+                  }}
+                >
                   Destination
                 </label>
-                <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                   {selectedBatch.destination}
                 </div>
               </div>
 
               {selectedBatch.estimatedDelivery && (
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
                     Estimated Delivery
                   </label>
-                  <div style={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                  <div style={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
                     {selectedBatch.estimatedDelivery}
                   </div>
                 </div>
               )}
             </div>
 
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <div
+              style={{
+                marginTop: "2rem",
+                display: "flex",
+                gap: "1rem",
+                justifyContent: "flex-end",
+              }}
+            >
               <button
                 onClick={() => setShowBatchModal(false)}
                 style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
                 }}
               >
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Herb Requirement Form Modal */}
+      {showRequirementForm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "2rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              padding: "2rem",
+              maxWidth: "500px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflow: "auto",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "700",
+                  color: "#1a1a1a",
+                  margin: 0,
+                }}
+              >
+                {editingRequirement
+                  ? "Edit Herb Requirement"
+                  : "Add New Herb Requirement"}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowRequirementForm(false);
+                  setEditingRequirement(null);
+                }}
+                style={{
+                  backgroundColor: "transparent",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  padding: "0.5rem",
+                  borderRadius: "8px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const requirementData = {
+                  herbName: formData.get("herbName") as string,
+                  scientificName: formData.get("scientificName") as string,
+                  requiredQuantity: parseFloat(
+                    formData.get("requiredQuantity") as string
+                  ),
+                  unit: formData.get("unit") as string,
+                  priority: formData.get("priority") as
+                    | "high"
+                    | "medium"
+                    | "low",
+                  description: formData.get("description") as string,
+                  targetDate: formData.get("targetDate") as string,
+                };
+
+                if (editingRequirement) {
+                  updateHerbRequirement(editingRequirement.id, requirementData);
+                  setEditingRequirement(null);
+                } else {
+                  addHerbRequirement(requirementData);
+                }
+                setShowRequirementForm(false);
+              }}
+            >
+              <div style={{ display: "grid", gap: "1rem" }}>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Herb Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="herbName"
+                    defaultValue={editingRequirement?.herbName || ""}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                    placeholder="e.g., Ashwagandha"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Scientific Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="scientificName"
+                    defaultValue={editingRequirement?.scientificName || ""}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                    placeholder="e.g., Withania somnifera"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "2fr 1fr",
+                    gap: "1rem",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#374151",
+                        display: "block",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Required Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      name="requiredQuantity"
+                      defaultValue={editingRequirement?.requiredQuantity || ""}
+                      required
+                      min="0"
+                      step="0.1"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                      placeholder="100"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#374151",
+                        display: "block",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Unit *
+                    </label>
+                    <select
+                      name="unit"
+                      defaultValue={editingRequirement?.unit || "kg"}
+                      required
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        backgroundColor: "#ffffff",
+                      }}
+                    >
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                      <option value="tons">tons</option>
+                      <option value="lbs">lbs</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Priority *
+                  </label>
+                  <select
+                    name="priority"
+                    defaultValue={editingRequirement?.priority || "medium"}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      backgroundColor: "#ffffff",
+                    }}
+                  >
+                    <option value="high">🔴 High Priority</option>
+                    <option value="medium">🟡 Medium Priority</option>
+                    <option value="low">🟢 Low Priority</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Target Date
+                  </label>
+                  <input
+                    type="date"
+                    name="targetDate"
+                    defaultValue={editingRequirement?.targetDate || ""}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      display: "block",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    defaultValue={editingRequirement?.description || ""}
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      resize: "vertical",
+                    }}
+                    placeholder="Optional description of the requirement usage..."
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "2rem",
+                  display: "flex",
+                  gap: "1rem",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRequirementForm(false);
+                    setEditingRequirement(null);
+                  }}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#f3f4f6",
+                    color: "#374151",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#d97706",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  {editingRequirement
+                    ? "Update Requirement"
+                    : "Add Requirement"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

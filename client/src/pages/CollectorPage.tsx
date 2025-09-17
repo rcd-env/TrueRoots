@@ -10,7 +10,9 @@ import {
   X,
   Award,
   Upload,
+  Wallet,
 } from "lucide-react";
+import { usePeraWallet } from "../wallet/usePeraWallet";
 // Plant identification now handled by backend API
 
 interface PlantIdentificationResult {
@@ -85,6 +87,12 @@ interface CollectionFormData {
   images: File[];
   notes: string;
   selectedScientificName: string; // Store scientific name when herb is selected
+  estimatedAmount?: number; // Optional: total estimated value
+  paymentAmount?: number; // Optional: 30% payment amount
+  transactionId?: string; // Optional: ALGO transaction ID
+  paymentStatus?: "pending" | "completed" | "failed" | "skipped"; // Payment status
+  paymentError?: string; // Error message if payment failed
+  submissionId?: string; // Unique submission identifier
 }
 
 const CollectorPage = () => {
@@ -107,13 +115,6 @@ const CollectorPage = () => {
   );
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<{
-    isVerified: boolean;
-    confidence: number;
-    ipfsHash: string;
-    aiAnalysis: string;
-  } | null>(null);
   const [plantIdentificationResult, setPlantIdentificationResult] =
     useState<PlantIdentificationResult | null>(null);
   const [isIdentifyingPlant, setIsIdentifyingPlant] = useState(false);
@@ -122,71 +123,7 @@ const CollectorPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // AI Verification and IPFS Upload Function
-  const verifyHerbWithAI = async () => {
-    if (formData.images.length === 0) return;
-
-    setIsVerifying(true);
-    setIsIdentifyingPlant(true);
-
-    try {
-      // First, identify the plant using the uploaded image with backend API
-      const primaryImage = formData.images[0];
-      const identificationResult = await identifyPlantWithBackend(
-        primaryImage,
-        formData.selectedScientificName
-      );
-
-      setPlantIdentificationResult(identificationResult);
-
-      // Simulate additional AI analysis delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Mock IPFS hash generation
-      const ipfsHash = `Qm${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-
-      // Determine if verification is successful based on plant identification
-      const isVerified =
-        identificationResult.isMatch && identificationResult.confidence > 75;
-      const confidence = identificationResult.confidence;
-
-      const analysisResults = [
-        `Plant identified as ${
-          identificationResult.scientificName
-        } with ${confidence.toFixed(1)}% confidence`,
-        isVerified
-          ? `✅ Scientific name matches expected: ${formData.selectedScientificName}`
-          : `❌ Scientific name mismatch. Expected: ${formData.selectedScientificName}, Detected: ${identificationResult.scientificName}`,
-        "Image quality assessment: Clear and suitable for identification",
-        isVerified
-          ? "✅ Plant verification successful"
-          : "❌ Plant verification failed",
-        "IPFS storage completed for blockchain traceability",
-      ];
-
-      setVerificationResult({
-        isVerified,
-        confidence: confidence,
-        ipfsHash: ipfsHash,
-        aiAnalysis: analysisResults.join(". "),
-      });
-    } catch (error) {
-      console.error("Verification failed:", error);
-      setVerificationResult({
-        isVerified: false,
-        confidence: 0,
-        ipfsHash: "",
-        aiAnalysis:
-          "Verification failed. Please try again with clearer images.",
-      });
-    } finally {
-      setIsVerifying(false);
-      setIsIdentifyingPlant(false);
-    }
-  };
+  const { address, isConnected, connect } = usePeraWallet();
 
   // Comprehensive herbs data with Algorand pricing based on rarity
   const herbs = [
@@ -237,7 +174,7 @@ const CollectorPage = () => {
       id: "6",
       name: "Ashwagandha",
       scientificName: "Withania somnifera",
-      price: 25,
+      price: 12,
       rarity: "Uncommon",
       category: "Adaptogen",
     },
@@ -710,11 +647,146 @@ const CollectorPage = () => {
     setIsSubmitting(true);
 
     try {
+      // Check if wallet is connected
+      if (!isConnected || !address) {
+        alert("Please connect your wallet first to receive payments!");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Store submitted data before resetting form
-      setSubmittedData({ ...formData });
+      // Calculate 30% of estimated amount
+      const selectedHerb = herbs.find((herb) => herb.id === formData.herbId);
+      const estimatedAmount = selectedHerb
+        ? selectedHerb.price * formData.quantity
+        : 0;
+      const paymentAmount = estimatedAmount * 0.3; // 30% of estimated amount
+
+      // Store submitted data before attempting payment
+      const submissionId = `TR${Date.now()}`;
+      const submissionData: CollectionFormData = {
+        ...formData,
+        estimatedAmount,
+        paymentAmount,
+        submissionId,
+        paymentStatus: "pending",
+      };
+      setSubmittedData(submissionData);
+
+      // Attempt to send payment to collector's wallet
+      if (paymentAmount > 0) {
+        try {
+          console.log(
+            `💰 Processing payment of ${paymentAmount} ALGO to ${address}`
+          );
+
+          // Call backend payment API
+          const paymentResponse = await fetch(
+            "http://localhost:8080/api/payments/collector-payment",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                collectorWalletAddress: address,
+                herbType: selectedHerb?.name || "Unknown",
+                quantity: formData.quantity,
+                estimatedValue: estimatedAmount,
+                submissionId: `TR${Date.now()}`,
+              }),
+            }
+          );
+
+          const paymentResult = await paymentResponse.json();
+
+          if (paymentResult.success) {
+            console.log(
+              "✅ Payment completed successfully!",
+              paymentResult.data
+            );
+
+            // Update submission data with payment transaction ID
+            const updatedSubmissionData = {
+              ...submissionData,
+              transactionId: paymentResult.data.transactionId,
+              paymentStatus: "completed" as const,
+            };
+            setSubmittedData(updatedSubmissionData);
+
+            // Show success message with transaction details
+            alert(
+              `Success! Collection submitted and ${paymentAmount.toFixed(
+                2
+              )} ALGO credited to your wallet!\n\nTransaction ID: ${
+                paymentResult.data.transactionId
+              }\nBlock: ${paymentResult.data.blockNumber}`
+            );
+          } else {
+            throw new Error(paymentResult.error || "Payment failed");
+          }
+        } catch (paymentError) {
+          console.error("💥 Payment failed:", paymentError);
+
+          // Detailed error logging
+          if (
+            paymentError instanceof TypeError &&
+            paymentError.message.includes("fetch")
+          ) {
+            console.error(
+              "🔧 Network Error: Server not reachable or CORS issue"
+            );
+            console.error(
+              "🔧 Make sure server is running on http://localhost:3001"
+            );
+          }
+
+          // Log the full error for debugging
+          console.error("Full error details:", {
+            name: paymentError instanceof Error ? paymentError.name : "Unknown",
+            message:
+              paymentError instanceof Error
+                ? paymentError.message
+                : String(paymentError),
+            stack:
+              paymentError instanceof Error
+                ? paymentError.stack
+                : "No stack trace",
+          });
+
+          // Update submission data with payment failure
+          const updatedSubmissionData = {
+            ...submissionData,
+            paymentStatus: "failed" as const,
+            paymentError:
+              paymentError instanceof Error
+                ? paymentError.message
+                : "Unknown error",
+          };
+          setSubmittedData(updatedSubmissionData);
+
+          alert(
+            `Collection submitted successfully, but payment failed: ${
+              paymentError instanceof Error
+                ? paymentError.message
+                : "Unknown error"
+            }\n\nPlease contact support with your submission ID: ${
+              submissionData.submissionId || "N/A"
+            }`
+          );
+        }
+      } else {
+        // No payment needed (amount too small)
+        const updatedSubmissionData = {
+          ...submissionData,
+          paymentStatus: "skipped" as const,
+          paymentError: "Amount below minimum threshold",
+        };
+        setSubmittedData(updatedSubmissionData);
+      }
+
       setShowSuccess(true);
 
       // Reset form
@@ -730,6 +802,7 @@ const CollectorPage = () => {
       setPreviewImages([]);
     } catch (error) {
       console.error("Error submitting collection:", error);
+      alert("Failed to submit collection. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -972,7 +1045,7 @@ const CollectorPage = () => {
                 marginBottom: "2rem",
               }}
             >
-              {[1, 2, 3, 4, 5].map((step) => (
+              {[1, 2, 3, 4].map((step) => (
                 <div
                   key={step}
                   style={{ display: "flex", alignItems: "center" }}
@@ -994,7 +1067,7 @@ const CollectorPage = () => {
                   >
                     {step}
                   </div>
-                  {step < 5 && (
+                  {step < 4 && (
                     <div
                       style={{
                         width: "60px",
@@ -1035,9 +1108,8 @@ const CollectorPage = () => {
                     Details
                   </span>
                 )}
-                {currentStep === 3 && "Herb Verification"}
-                {currentStep === 4 && "Verify Location"}
-                {currentStep === 5 && (
+                {currentStep === 3 && "Verify Location"}
+                {currentStep === 4 && (
                   <span>
                     Review{" "}
                     <span style={{ fontFamily: "serif", fontStyle: "italic" }}>
@@ -1048,7 +1120,7 @@ const CollectorPage = () => {
                 )}
               </h3>
               <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-                Step {currentStep} of 5
+                Step {currentStep} of 4
               </p>
             </div>
           </div>
@@ -2669,303 +2741,8 @@ const CollectorPage = () => {
               </div>
             )}
 
-            {/* Step 3: Herb Verification */}
+            {/* Step 3: Location Verification */}
             {currentStep === 3 && (
-              <div
-                style={{
-                  backgroundColor: "#ffffff",
-                  borderRadius: "16px",
-                  padding: "2rem",
-                  border: "1px solid #f3f4f6",
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "64px",
-                      height: "64px",
-                      backgroundColor: "#7c3aed15",
-                      borderRadius: "16px",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#7c3aed"
-                      strokeWidth="2"
-                    >
-                      <path d="M9 12l2 2 4-4" />
-                      <circle cx="12" cy="12" r="9" />
-                    </svg>
-                  </div>
-                  <h4
-                    style={{
-                      fontSize: "1.25rem",
-                      fontWeight: "600",
-                      color: "#1a1a1a",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    AI-Powered Herb Verification
-                  </h4>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-                    Our AI will analyze your photos and verify the herb
-                    authenticity using IPFS blockchain storage
-                  </p>
-                </div>
-
-                {!verificationResult && !isVerifying && (
-                  <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-                    <button
-                      type="button"
-                      onClick={verifyHerbWithAI}
-                      style={{
-                        backgroundColor: "#7c3aed",
-                        color: "white",
-                        border: "none",
-                        padding: "1rem 2rem",
-                        borderRadius: "12px",
-                        fontSize: "1rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        margin: "0 auto",
-                      }}
-                    >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M12 1v6m0 6v6" />
-                        <path d="m21 12-6-3-6 3-6-3" />
-                      </svg>
-                      Start AI Verification
-                    </button>
-                  </div>
-                )}
-
-                {isVerifying && (
-                  <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                        padding: "1.5rem 2rem",
-                        backgroundColor: "#f8fafc",
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          border: "3px solid #e2e8f0",
-                          borderTop: "3px solid #7c3aed",
-                          borderRadius: "50%",
-                          animation: "spin 1s linear infinite",
-                        }}
-                      ></div>
-                      <div>
-                        <p
-                          style={{
-                            fontWeight: "600",
-                            color: "#1a1a1a",
-                            margin: "0",
-                          }}
-                        >
-                          AI Analysis in Progress...
-                        </p>
-                        <p
-                          style={{
-                            color: "#6b7280",
-                            fontSize: "0.875rem",
-                            margin: "0",
-                          }}
-                        >
-                          Uploading to IPFS and analyzing herb characteristics
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {verificationResult && (
-                  <div
-                    style={{
-                      backgroundColor: verificationResult.isVerified
-                        ? "#f0fdf4"
-                        : "#fef2f2",
-                      border: `1px solid ${
-                        verificationResult.isVerified ? "#bbf7d0" : "#fecaca"
-                      }`,
-                      borderRadius: "12px",
-                      padding: "1.5rem",
-                      marginBottom: "2rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          backgroundColor: verificationResult.isVerified
-                            ? "#22c55e"
-                            : "#ef4444",
-                          borderRadius: "50%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="2"
-                        >
-                          {verificationResult.isVerified ? (
-                            <path d="M9 12l2 2 4-4" />
-                          ) : (
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          )}
-                        </svg>
-                      </div>
-                      <h5
-                        style={{
-                          fontSize: "1.125rem",
-                          fontWeight: "600",
-                          color: verificationResult.isVerified
-                            ? "#166534"
-                            : "#dc2626",
-                          margin: "0",
-                        }}
-                      >
-                        {verificationResult.isVerified
-                          ? "Verification Successful!"
-                          : "Verification Failed"}
-                      </h5>
-                    </div>
-
-                    <div style={{ marginBottom: "1rem" }}>
-                      <p
-                        style={{
-                          color: "#374151",
-                          fontSize: "0.875rem",
-                          marginBottom: "0.5rem",
-                        }}
-                      >
-                        <strong>Confidence Level:</strong>{" "}
-                        {verificationResult.confidence.toFixed(1)}%
-                      </p>
-                      <p
-                        style={{
-                          color: "#374151",
-                          fontSize: "0.875rem",
-                          marginBottom: "0.5rem",
-                        }}
-                      >
-                        <strong>IPFS Hash:</strong>{" "}
-                        <code
-                          style={{
-                            backgroundColor: "#f3f4f6",
-                            padding: "0.25rem 0.5rem",
-                            borderRadius: "4px",
-                            fontSize: "0.75rem",
-                          }}
-                        >
-                          {verificationResult.ipfsHash}
-                        </code>
-                      </p>
-                      <p
-                        style={{
-                          color: "#374151",
-                          fontSize: "0.875rem",
-                          marginBottom: "0",
-                        }}
-                      >
-                        <strong>AI Analysis:</strong>{" "}
-                        {verificationResult.aiAnalysis}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "1rem",
-                    justifyContent: "center",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    style={{
-                      backgroundColor: "transparent",
-                      color: "#6b7280",
-                      border: "1px solid #d1d5db",
-                      padding: "1rem 2rem",
-                      borderRadius: "12px",
-                      fontSize: "1rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(4)}
-                    disabled={!verificationResult?.isVerified}
-                    style={{
-                      backgroundColor: verificationResult?.isVerified
-                        ? "#059669"
-                        : "#e5e7eb",
-                      color: verificationResult?.isVerified
-                        ? "white"
-                        : "#9ca3af",
-                      border: "none",
-                      padding: "1rem 2rem",
-                      borderRadius: "12px",
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      cursor: verificationResult?.isVerified
-                        ? "pointer"
-                        : "not-allowed",
-                    }}
-                  >
-                    Continue to Location
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Location Verification */}
-            {currentStep === 4 && (
               <div
                 style={{
                   backgroundColor: "#ffffff",
@@ -3120,7 +2897,7 @@ const CollectorPage = () => {
                 >
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => setCurrentStep(2)}
                     style={{
                       backgroundColor: "transparent",
                       color: "#6b7280",
@@ -3136,7 +2913,7 @@ const CollectorPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(5)}
+                    onClick={() => setCurrentStep(4)}
                     disabled={!location}
                     style={{
                       backgroundColor: location ? "#059669" : "#e5e7eb",
@@ -3155,8 +2932,8 @@ const CollectorPage = () => {
               </div>
             )}
 
-            {/* Step 5: Review & Submit */}
-            {currentStep === 5 && (
+            {/* Step 4: Review & Submit */}
+            {currentStep === 4 && (
               <div
                 style={{
                   backgroundColor: "#ffffff",
@@ -3367,6 +3144,71 @@ const CollectorPage = () => {
                     justifyContent: "center",
                   }}
                 >
+                  {/* Wallet Status */}
+                  <div
+                    style={{
+                      backgroundColor: isConnected ? "#d1fae5" : "#fef3c7",
+                      border: `1px solid ${
+                        isConnected ? "#10b981" : "#f59e0b"
+                      }`,
+                      borderRadius: "8px",
+                      padding: "1rem",
+                      marginBottom: "1rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <Wallet
+                      size={20}
+                      color={isConnected ? "#10b981" : "#f59e0b"}
+                    />
+                    <div>
+                      {isConnected ? (
+                        <div>
+                          <div style={{ fontWeight: "600", color: "#065f46" }}>
+                            Wallet Connected
+                          </div>
+                          <div
+                            style={{ fontSize: "0.875rem", color: "#047857" }}
+                          >
+                            {address?.slice(0, 8)}...{address?.slice(-4)} •
+                            Ready to receive payment
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontWeight: "600", color: "#92400e" }}>
+                            Wallet Not Connected
+                          </div>
+                          <div
+                            style={{ fontSize: "0.875rem", color: "#b45309" }}
+                          >
+                            Connect wallet to receive 30% payment after
+                            submission
+                          </div>
+                          <button
+                            type="button"
+                            onClick={connect}
+                            style={{
+                              backgroundColor: "#f59e0b",
+                              color: "white",
+                              border: "none",
+                              padding: "0.5rem 1rem",
+                              borderRadius: "6px",
+                              fontSize: "0.875rem",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              marginTop: "0.5rem",
+                            }}
+                          >
+                            Connect Wallet
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
@@ -3489,8 +3331,27 @@ const CollectorPage = () => {
               }}
             >
               Your {herbs.find((h) => h.id === submittedData?.herbId)?.name}{" "}
-              collection has been recorded on the blockchain. Payment will be
-              processed within 24 hours.
+              collection has been recorded.
+              {submittedData?.paymentAmount &&
+                submittedData?.paymentStatus === "completed" && (
+                  <span style={{ color: "#059669", fontWeight: "600" }}>
+                    {" "}
+                    {submittedData.paymentAmount.toFixed(2)} ALGO has been
+                    successfully credited to your wallet!
+                  </span>
+                )}
+              {submittedData?.paymentStatus === "failed" && (
+                <span style={{ color: "#dc2626", fontWeight: "600" }}>
+                  {" "}
+                  Payment failed: {submittedData.paymentError}
+                </span>
+              )}
+              {submittedData?.paymentStatus === "pending" && (
+                <span style={{ color: "#f59e0b", fontWeight: "600" }}>
+                  {" "}
+                  Payment is being processed...
+                </span>
+              )}
             </p>
 
             <div
@@ -3548,10 +3409,50 @@ const CollectorPage = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  marginBottom: "0.75rem",
                 }}
               >
                 <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                  Estimated Payment:
+                  Estimated Value:
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#1a1a1a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "14px",
+                      height: "14px",
+                      backgroundColor: "#6b7280",
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.625rem",
+                      color: "white",
+                      fontWeight: "700",
+                    }}
+                  >
+                    A
+                  </span>
+                  {submittedData?.estimatedAmount?.toFixed(2) || "0.00"} ALGO
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                  Payment (30%):
                 </span>
                 <span
                   style={{
@@ -3579,14 +3480,78 @@ const CollectorPage = () => {
                   >
                     A
                   </span>
-                  {(
-                    (submittedData?.quantity || 0) *
-                    (herbs.find((h) => h.id === submittedData?.herbId)?.price ||
-                      0)
-                  ).toFixed(2)}{" "}
-                  ALGO
+                  {submittedData?.paymentAmount?.toFixed(2) || "0.00"} ALGO
                 </span>
               </div>
+
+              {/* Payment Status and Transaction Info */}
+              {submittedData?.paymentStatus && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "0.75rem",
+                    paddingTop: "0.75rem",
+                    borderTop: "1px solid #e5e7eb",
+                  }}
+                >
+                  <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                    Payment Status:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color:
+                        submittedData.paymentStatus === "completed"
+                          ? "#059669"
+                          : submittedData.paymentStatus === "failed"
+                          ? "#dc2626"
+                          : submittedData.paymentStatus === "pending"
+                          ? "#f59e0b"
+                          : "#6b7280",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {submittedData.paymentStatus}
+                  </span>
+                </div>
+              )}
+
+              {/* Transaction ID */}
+              {submittedData?.transactionId && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                    Transaction ID:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontFamily: "monospace",
+                      fontWeight: "600",
+                      color: "#1a1a1a",
+                      backgroundColor: "#f3f4f6",
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "4px",
+                      maxWidth: "200px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {submittedData.transactionId.length > 20
+                      ? `${submittedData.transactionId.slice(0, 20)}...`
+                      : submittedData.transactionId}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: "1rem" }}>
@@ -3605,8 +3570,6 @@ const CollectorPage = () => {
                     selectedScientificName: "",
                   });
                   setPreviewImages([]);
-                  setVerificationResult(null);
-                  setIsVerifying(false);
                   stopCamera();
                 }}
                 style={{
