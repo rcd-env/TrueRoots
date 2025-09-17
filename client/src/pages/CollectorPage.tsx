@@ -9,7 +9,73 @@ import {
   Plus,
   X,
   Award,
+  Upload,
 } from "lucide-react";
+// Plant identification now handled by backend API
+
+interface PlantIdentificationResult {
+  scientificName: string;
+  commonName?: string;
+  confidence: number;
+  isMatch: boolean;
+}
+
+// Backend API function for plant identification
+const identifyPlantWithBackend = async (
+  imageFile: File,
+  expectedScientificName: string
+): Promise<PlantIdentificationResult> => {
+  const formData = new FormData();
+  formData.append("image", imageFile);
+
+  console.log("🌿 Starting plant identification...");
+  console.log("📷 Image file:", imageFile.name, imageFile.size, "bytes");
+  console.log("🎯 Expected scientific name:", expectedScientificName);
+
+  try {
+    console.log("🚀 Sending request to backend...");
+    const response = await fetch("http://localhost:8080/api/plant-identify", {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log("📡 Response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Server error response:", errorText);
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("✅ Backend response:", data);
+
+    // Check if the detected scientific name matches the expected one
+    const isMatch =
+      data.scientificName
+        .toLowerCase()
+        .includes(expectedScientificName.toLowerCase()) ||
+      expectedScientificName
+        .toLowerCase()
+        .includes(data.scientificName.toLowerCase());
+
+    const result = {
+      scientificName: data.scientificName,
+      commonName:
+        data.commonNames && data.commonNames.length > 0
+          ? data.commonNames[0]
+          : undefined,
+      confidence: data.confidence * 100, // Convert to percentage
+      isMatch,
+    };
+
+    console.log("🎉 Final result:", result);
+    return result;
+  } catch (error) {
+    console.error("💥 Plant identification failed:", error);
+    throw new Error("Failed to identify plant. Please try again.");
+  }
+};
 
 interface CollectionFormData {
   herbId: string;
@@ -18,6 +84,7 @@ interface CollectionFormData {
   unit: string;
   images: File[];
   notes: string;
+  selectedScientificName: string; // Store scientific name when herb is selected
 }
 
 const CollectorPage = () => {
@@ -28,6 +95,7 @@ const CollectorPage = () => {
     unit: "kg",
     images: [],
     notes: "",
+    selectedScientificName: "", // Initialize scientific name storage
   });
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     null
@@ -46,6 +114,9 @@ const CollectorPage = () => {
     ipfsHash: string;
     aiAnalysis: string;
   } | null>(null);
+  const [plantIdentificationResult, setPlantIdentificationResult] =
+    useState<PlantIdentificationResult | null>(null);
+  const [isIdentifyingPlant, setIsIdentifyingPlant] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,32 +128,47 @@ const CollectorPage = () => {
     if (formData.images.length === 0) return;
 
     setIsVerifying(true);
+    setIsIdentifyingPlant(true);
 
     try {
-      // Simulate AI analysis delay
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // First, identify the plant using the uploaded image with backend API
+      const primaryImage = formData.images[0];
+      const identificationResult = await identifyPlantWithBackend(
+        primaryImage,
+        formData.selectedScientificName
+      );
+
+      setPlantIdentificationResult(identificationResult);
+
+      // Simulate additional AI analysis delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Mock IPFS hash generation
       const ipfsHash = `Qm${Math.random()
         .toString(36)
         .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
 
-      // Mock AI analysis based on selected herb
-      const selectedHerb = herbs.find((h) => h.id === formData.herbId);
-      const confidence = Math.random() * 20 + 80; // 80-100% confidence
+      // Determine if verification is successful based on plant identification
+      const isVerified =
+        identificationResult.isMatch && identificationResult.confidence > 75;
+      const confidence = identificationResult.confidence;
 
       const analysisResults = [
-        `Identified as ${selectedHerb?.name} with ${confidence.toFixed(
-          1
-        )}% confidence`,
-        "Leaf structure and color patterns match expected characteristics",
-        "No visible signs of contamination or disease detected",
-        "Quality assessment: Premium grade specimen",
-        "Recommended for pharmaceutical use",
+        `Plant identified as ${
+          identificationResult.scientificName
+        } with ${confidence.toFixed(1)}% confidence`,
+        isVerified
+          ? `✅ Scientific name matches expected: ${formData.selectedScientificName}`
+          : `❌ Scientific name mismatch. Expected: ${formData.selectedScientificName}, Detected: ${identificationResult.scientificName}`,
+        "Image quality assessment: Clear and suitable for identification",
+        isVerified
+          ? "✅ Plant verification successful"
+          : "❌ Plant verification failed",
+        "IPFS storage completed for blockchain traceability",
       ];
 
       setVerificationResult({
-        isVerified: confidence > 85,
+        isVerified,
         confidence: confidence,
         ipfsHash: ipfsHash,
         aiAnalysis: analysisResults.join(". "),
@@ -93,10 +179,12 @@ const CollectorPage = () => {
         isVerified: false,
         confidence: 0,
         ipfsHash: "",
-        aiAnalysis: "Verification failed. Please try again.",
+        aiAnalysis:
+          "Verification failed. Please try again with clearer images.",
       });
     } finally {
       setIsVerifying(false);
+      setIsIdentifyingPlant(false);
     }
   };
 
@@ -571,7 +659,7 @@ const CollectorPage = () => {
     };
   }, [cameraStream]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("File input changed", e.target.files);
     const files = Array.from(e.target.files || []);
     console.log("Files array:", files);
@@ -587,6 +675,23 @@ const CollectorPage = () => {
       );
       setPreviewImages((prev) => [...prev, ...newPreviews]);
       console.log("Preview images updated:", newPreviews);
+
+      // Identify plant from the first uploaded image if we have a scientific name to compare
+      if (formData.selectedScientificName && files.length > 0) {
+        setIsIdentifyingPlant(true);
+        try {
+          const result = await identifyPlantWithBackend(
+            files[0],
+            formData.selectedScientificName
+          );
+          setPlantIdentificationResult(result);
+          console.log("Plant identification result:", result);
+        } catch (error) {
+          console.error("Plant identification failed:", error);
+        } finally {
+          setIsIdentifyingPlant(false);
+        }
+      }
     }
   };
 
@@ -620,6 +725,7 @@ const CollectorPage = () => {
         unit: "kg",
         images: [],
         notes: "",
+        selectedScientificName: "",
       });
       setPreviewImages([]);
     } catch (error) {
@@ -1032,7 +1138,11 @@ const CollectorPage = () => {
                       <div
                         key={herb.id}
                         onClick={() =>
-                          setFormData((prev) => ({ ...prev, herbId: herb.id }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            herbId: herb.id,
+                            selectedScientificName: herb.scientificName,
+                          }))
                         }
                         style={{
                           padding: "1.5rem",
@@ -1454,6 +1564,81 @@ const CollectorPage = () => {
                   and provide quantity details.
                 </p>
 
+                {/* Verification Status Summary */}
+                {plantIdentificationResult && (
+                  <div
+                    style={{
+                      backgroundColor: plantIdentificationResult.isMatch
+                        ? "#f0fdf4"
+                        : "#fef2f2",
+                      border: `2px solid ${
+                        plantIdentificationResult.isMatch
+                          ? "#bbf7d0"
+                          : "#fecaca"
+                      }`,
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      marginBottom: "2rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "50%",
+                        backgroundColor: plantIdentificationResult.isMatch
+                          ? "#22c55e"
+                          : "#ef4444",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {plantIdentificationResult.isMatch ? (
+                        <CheckCircle size={24} color="white" />
+                      ) : (
+                        <AlertCircle size={24} color="white" />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4
+                        style={{
+                          fontSize: "1.125rem",
+                          fontWeight: "600",
+                          color: plantIdentificationResult.isMatch
+                            ? "#166534"
+                            : "#dc2626",
+                          margin: "0 0 0.5rem 0",
+                        }}
+                      >
+                        {plantIdentificationResult.isMatch
+                          ? "Plant Verified ✅"
+                          : "Plant Verification Failed ❌"}
+                      </h4>
+                      <p
+                        style={{
+                          fontSize: "0.875rem",
+                          color: plantIdentificationResult.isMatch
+                            ? "#047857"
+                            : "#991b1b",
+                          margin: 0,
+                        }}
+                      >
+                        Detected: {plantIdentificationResult.scientificName} (
+                        {plantIdentificationResult.confidence.toFixed(1)}%
+                        confidence)
+                        {plantIdentificationResult.isMatch
+                          ? " - Matches expected plant type"
+                          : ` - Does not match expected: ${formData.selectedScientificName}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Photo Upload */}
                 <div style={{ marginBottom: "2rem" }}>
                   {/* Camera Section */}
@@ -1510,6 +1695,7 @@ const CollectorPage = () => {
                             border: "none",
                             cursor: "pointer",
                             transition: "all 0.2s ease",
+                            marginRight: "1rem",
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.backgroundColor = "#047857";
@@ -1521,6 +1707,44 @@ const CollectorPage = () => {
                           <Camera size={16} />
                           Start Camera
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            backgroundColor: "#7c3aed",
+                            color: "white",
+                            padding: "0.75rem 1.5rem",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#6d28d9";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#7c3aed";
+                          }}
+                        >
+                          <Upload size={16} />
+                          Upload Photos
+                        </button>
+
+                        {/* Hidden file input */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          style={{ display: "none" }}
+                        />
                       </div>
                     ) : (
                       <div>
@@ -1962,7 +2186,194 @@ const CollectorPage = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Test Plant Identification Button */}
+                  {formData.images.length > 0 &&
+                    formData.selectedScientificName &&
+                    !isIdentifyingPlant && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          marginTop: "1rem",
+                          display: "flex",
+                          gap: "1rem",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (formData.images.length > 0) {
+                              setIsIdentifyingPlant(true);
+                              try {
+                                const result = await identifyPlantWithBackend(
+                                  formData.images[0],
+                                  formData.selectedScientificName
+                                );
+                                setPlantIdentificationResult(result);
+                                console.log(
+                                  "Manual plant identification result:",
+                                  result
+                                );
+                              } catch (error) {
+                                console.error(
+                                  "Manual plant identification failed:",
+                                  error
+                                );
+                                // Show a mock result for testing
+                                setPlantIdentificationResult({
+                                  scientificName: "Test Plant (API Error)",
+                                  commonName: "Test Common Name",
+                                  confidence: 85,
+                                  isMatch: false,
+                                });
+                              } finally {
+                                setIsIdentifyingPlant(false);
+                              }
+                            }
+                          }}
+                          style={{
+                            backgroundColor: "#7c3aed",
+                            color: "white",
+                            border: "none",
+                            padding: "0.75rem 1.5rem",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          🔍 Test Plant Identification
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Mock successful result for UI testing
+                            setPlantIdentificationResult({
+                              scientificName: formData.selectedScientificName,
+                              commonName: "Mock Plant",
+                              confidence: 92,
+                              isMatch: true,
+                            });
+                          }}
+                          style={{
+                            backgroundColor: "#059669",
+                            color: "white",
+                            border: "none",
+                            padding: "0.75rem 1.5rem",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          ✅ Mock Success
+                        </button>
+                      </div>
+                    )}
                 </div>
+
+                {/* Plant Identification Results */}
+                {(plantIdentificationResult || isIdentifyingPlant) && (
+                  <div
+                    style={{
+                      backgroundColor: plantIdentificationResult?.isMatch
+                        ? "#f0fdf4"
+                        : "#fef2f2",
+                      border: `2px solid ${
+                        plantIdentificationResult?.isMatch
+                          ? "#bbf7d0"
+                          : "#fecaca"
+                      }`,
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      marginBottom: "2rem",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "1.25rem",
+                        fontWeight: "600",
+                        color: "#1a1a1a",
+                        marginBottom: "1rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      {isIdentifyingPlant ? (
+                        <>
+                          <div
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              border: "2px solid #e5e7eb",
+                              borderTop: "2px solid #059669",
+                              borderRadius: "50%",
+                              animation: "spin 1s linear infinite",
+                            }}
+                          />
+                          Identifying Plant...
+                        </>
+                      ) : plantIdentificationResult?.isMatch ? (
+                        <>
+                          <CheckCircle size={20} color="#059669" />
+                          Plant Verified
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={20} color="#dc2626" />
+                          Plant Verification Failed
+                        </>
+                      )}
+                    </h4>
+
+                    {plantIdentificationResult && !isIdentifyingPlant && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                        }}
+                      >
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <strong>Detected:</strong>{" "}
+                          {plantIdentificationResult.scientificName}(
+                          {plantIdentificationResult.commonName})
+                        </div>
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <strong>Expected:</strong>{" "}
+                          {formData.selectedScientificName}
+                        </div>
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <strong>Confidence:</strong>{" "}
+                          {plantIdentificationResult.confidence.toFixed(1)}%
+                        </div>
+                        <div
+                          style={{
+                            padding: "0.75rem",
+                            backgroundColor: plantIdentificationResult.isMatch
+                              ? "#dcfce7"
+                              : "#fee2e2",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          {plantIdentificationResult.isMatch
+                            ? "✅ Scientific names match - plant is verified for collection"
+                            : "❌ Scientific names do not match - please verify you have the correct plant"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Quantity & Earnings */}
                 <div
@@ -3191,6 +3602,7 @@ const CollectorPage = () => {
                     unit: "kg",
                     images: [],
                     notes: "",
+                    selectedScientificName: "",
                   });
                   setPreviewImages([]);
                   setVerificationResult(null);

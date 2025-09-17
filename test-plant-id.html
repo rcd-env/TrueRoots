@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrueRoots - Plant ID API Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #059669;
+        background: #f0fdf4;
+      }
+      .error {
+        border-left-color: #dc2626;
+        background: #fef2f2;
+      }
+      button {
+        background: #059669;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+      }
+      button:hover {
+        background: #047857;
+      }
+      button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+      input[type="file"] {
+        margin: 10px 0;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 100%;
+      }
+      .loading {
+        color: #059669;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🌿 TrueRoots Plant Identification Test</h1>
+      <p>Test the plant identification API to ensure it's working correctly.</p>
+
+      <form id="testForm">
+        <label for="imageInput">Select a plant image:</label>
+        <input type="file" id="imageInput" accept="image/*" required />
+        <button type="submit" id="submitBtn">🔍 Identify Plant</button>
+      </form>
+
+      <div id="result"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("testForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const fileInput = document.getElementById("imageInput");
+          const resultDiv = document.getElementById("result");
+          const submitBtn = document.getElementById("submitBtn");
+
+          if (!fileInput.files[0]) {
+            resultDiv.innerHTML =
+              '<div class="result error"><strong>❌ Error:</strong> Please select an image file</div>';
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("image", fileInput.files[0]);
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "🔄 Identifying...";
+
+          resultDiv.innerHTML =
+            '<div class="result"><div class="loading">🌿 Analyzing plant image...</div></div>';
+
+          try {
+            console.log(
+              "🚀 Sending request to:",
+              "http://localhost:8080/api/plant-identify"
+            );
+            console.log(
+              "📁 File:",
+              fileInput.files[0].name,
+              fileInput.files[0].size,
+              "bytes"
+            );
+
+            const response = await fetch(
+              "http://localhost:8080/api/plant-identify",
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            console.log("📡 Response status:", response.status);
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("❌ Error response:", errorText);
+              throw new Error(
+                `Server error: ${response.status} - ${errorText}`
+              );
+            }
+
+            const data = await response.json();
+            console.log("✅ Success response:", data);
+
+            resultDiv.innerHTML = `
+                    <div class="result">
+                        <h3>✅ Plant Identification Successful!</h3>
+                        <p><strong>Scientific Name:</strong> ${
+                          data.scientificName || "N/A"
+                        }</p>
+                        <p><strong>Confidence:</strong> ${
+                          data.confidence
+                            ? (data.confidence * 100).toFixed(1) + "%"
+                            : "N/A"
+                        }</p>
+                        <p><strong>Common Names:</strong> ${
+                          data.commonNames && data.commonNames.length > 0
+                            ? data.commonNames.join(", ")
+                            : "N/A"
+                        }</p>
+                        <details>
+                            <summary>Full API Response</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+          } catch (error) {
+            console.error("💥 Request failed:", error);
+
+            let errorMessage = error.message;
+            if (error.message.includes("Failed to fetch")) {
+              errorMessage =
+                "Cannot connect to server. Make sure the backend is running on port 8080.";
+            }
+
+            resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Plant Identification Failed</h3>
+                        <p><strong>Error:</strong> ${errorMessage}</p>
+                        <p><em>Check the browser console for more details.</em></p>
+                        <p><strong>Troubleshooting:</strong></p>
+                        <ul>
+                            <li>Ensure the backend server is running on port 8080</li>
+                            <li>Check if PLANT_ID_API_KEY is configured in .env</li>
+                            <li>Verify the image file is valid</li>
+                            <li>Check browser console for detailed error logs</li>
+                        </ul>
+                    </div>
+                `;
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "🔍 Identify Plant";
+          }
+        });
+    </script>
+  </body>
+</html>

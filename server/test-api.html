@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Plant Identification API</title>
+  </head>
+  <body>
+    <h1>Test Plant Identification API</h1>
+    <form id="testForm">
+      <input type="file" id="imageInput" accept="image/*" required />
+      <button type="submit">Test Plant Identification</button>
+    </form>
+
+    <div id="result" style="margin-top: 20px"></div>
+
+    <script>
+      document
+        .getElementById("testForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const fileInput = document.getElementById("imageInput");
+          const resultDiv = document.getElementById("result");
+
+          if (!fileInput.files[0]) {
+            resultDiv.innerHTML =
+              '<p style="color: red;">Please select an image file</p>';
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("image", fileInput.files[0]);
+
+          resultDiv.innerHTML = "<p>Testing API connection...</p>";
+
+          try {
+            const response = await fetch(
+              "http://localhost:3001/api/plant-identify",
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            resultDiv.innerHTML = `
+                    <h3>✅ API Connection Successful!</h3>
+                    <p><strong>Scientific Name:</strong> ${
+                      data.scientificName
+                    }</p>
+                    <p><strong>Confidence:</strong> ${(
+                      data.confidence * 100
+                    ).toFixed(1)}%</p>
+                    <p><strong>Common Names:</strong> ${
+                      data.commonNames ? data.commonNames.join(", ") : "None"
+                    }</p>
+                `;
+          } catch (error) {
+            resultDiv.innerHTML = `
+                    <h3>❌ API Test Failed</h3>
+                    <p style="color: red;">${error.message}</p>
+                    <p><em>Note: You need a valid Plant.id API key in the .env file for full functionality.</em></p>
+                `;
+          }
+        });
+    </script>
+  </body>
+</html>
