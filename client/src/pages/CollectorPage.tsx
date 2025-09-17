@@ -654,6 +654,13 @@ const CollectorPage = () => {
         return;
       }
 
+      // Check if plant is verified
+      if (plantIdentificationResult && !plantIdentificationResult.isMatch) {
+        alert("Cannot submit unverified herbs. Please verify the plant first.");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -662,7 +669,11 @@ const CollectorPage = () => {
       const estimatedAmount = selectedHerb
         ? selectedHerb.price * formData.quantity
         : 0;
-      const paymentAmount = estimatedAmount * 0.3; // 30% of estimated amount
+
+      // Only allow payment if plant is verified or no verification was performed
+      const isPlantVerified =
+        !plantIdentificationResult || plantIdentificationResult.isMatch;
+      const paymentAmount = isPlantVerified ? estimatedAmount * 0.3 : 0;
 
       // Store submitted data before attempting payment
       const submissionId = `TR${Date.now()}`;
@@ -671,12 +682,13 @@ const CollectorPage = () => {
         estimatedAmount,
         paymentAmount,
         submissionId,
-        paymentStatus: "pending",
+        paymentStatus: isPlantVerified ? "pending" : "skipped",
+        paymentError: isPlantVerified ? undefined : "Plant not verified",
       };
       setSubmittedData(submissionData);
 
-      // Attempt to send payment to collector's wallet
-      if (paymentAmount > 0) {
+      // Attempt to send payment to collector's wallet only if plant is verified
+      if (paymentAmount > 0 && isPlantVerified) {
         try {
           console.log(
             `💰 Processing payment of ${paymentAmount} ALGO to ${address}`
@@ -777,6 +789,13 @@ const CollectorPage = () => {
             }`
           );
         }
+      } else if (!isPlantVerified) {
+        // Plant not verified - no payment
+        alert(
+          `Collection submitted but no payment processed due to unverified plant.\n\nSubmission ID: ${
+            submissionData.submissionId || "N/A"
+          }`
+        );
       } else {
         // No payment needed (amount too small)
         const updatedSubmissionData = {
@@ -800,6 +819,7 @@ const CollectorPage = () => {
         selectedScientificName: "",
       });
       setPreviewImages([]);
+      setPlantIdentificationResult(null);
     } catch (error) {
       console.error("Error submitting collection:", error);
       alert("Failed to submit collection. Please try again.");
@@ -2442,6 +2462,56 @@ const CollectorPage = () => {
                             ? "✅ Scientific names match - plant is verified for collection"
                             : "❌ Scientific names do not match - please verify you have the correct plant"}
                         </div>
+
+                        {/* Additional warning for unverified plants */}
+                        {!plantIdentificationResult.isMatch && (
+                          <div
+                            style={{
+                              marginTop: "1rem",
+                              padding: "1rem",
+                              backgroundColor: "#fef2f2",
+                              border: "1px solid #fecaca",
+                              borderRadius: "8px",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                                fontWeight: "600",
+                                color: "#dc2626",
+                                marginBottom: "0.5rem",
+                              }}
+                            >
+                              <AlertCircle size={16} />
+                              Plant Verification Required
+                            </div>
+                            <ul
+                              style={{
+                                margin: 0,
+                                paddingLeft: "1.5rem",
+                                color: "#991b1b",
+                                lineHeight: "1.5",
+                              }}
+                            >
+                              <li>
+                                Form fields are disabled until plant is verified
+                              </li>
+                              <li>
+                                Cannot proceed to next step without verification
+                              </li>
+                              <li>
+                                No payment will be processed for unverified
+                                herbs
+                              </li>
+                              <li>
+                                Please retake photo or select correct herb type
+                              </li>
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2494,13 +2564,27 @@ const CollectorPage = () => {
                               quantity: parseFloat(e.target.value) || 0,
                             }))
                           }
+                          disabled={
+                            plantIdentificationResult?.isMatch === false
+                          }
                           style={{
                             flex: 1,
                             padding: "0.75rem 1rem",
                             border: "1px solid #d1d5db",
                             borderRadius: "8px",
                             fontSize: "1rem",
-                            backgroundColor: "#ffffff",
+                            backgroundColor:
+                              plantIdentificationResult?.isMatch === false
+                                ? "#f9fafb"
+                                : "#ffffff",
+                            color:
+                              plantIdentificationResult?.isMatch === false
+                                ? "#9ca3af"
+                                : "#1a1a1a",
+                            cursor:
+                              plantIdentificationResult?.isMatch === false
+                                ? "not-allowed"
+                                : "text",
                           }}
                           required
                         />
@@ -2530,11 +2614,16 @@ const CollectorPage = () => {
                       <div
                         style={{
                           fontSize: "0.875rem",
-                          color: "#6b7280",
+                          color:
+                            plantIdentificationResult?.isMatch === false
+                              ? "#dc2626"
+                              : "#6b7280",
                           textAlign: "center",
                         }}
                       >
-                        Enter the total quantity collected
+                        {plantIdentificationResult?.isMatch === false
+                          ? "⚠️ Quantity input disabled - plant verification required"
+                          : "Enter the total quantity collected"}
                       </div>
                     </div>
                   </div>
@@ -2554,9 +2643,15 @@ const CollectorPage = () => {
                     <div
                       style={{
                         backgroundColor:
-                          formData.quantity > 0 ? "#f0fdf4" : "#f8fafc",
+                          plantIdentificationResult?.isMatch === false
+                            ? "#fef2f2"
+                            : formData.quantity > 0
+                            ? "#f0fdf4"
+                            : "#f8fafc",
                         border:
-                          formData.quantity > 0
+                          plantIdentificationResult?.isMatch === false
+                            ? "2px solid #fecaca"
+                            : formData.quantity > 0
                             ? "2px solid #bbf7d0"
                             : "2px solid #f3f4f6",
                         borderRadius: "12px",
@@ -2565,7 +2660,33 @@ const CollectorPage = () => {
                         transition: "all 0.2s ease",
                       }}
                     >
-                      {formData.quantity > 0 ? (
+                      {plantIdentificationResult?.isMatch === false ? (
+                        <>
+                          <div
+                            style={{
+                              fontSize: "1.25rem",
+                              fontWeight: "700",
+                              color: "#dc2626",
+                              marginBottom: "0.5rem",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <AlertCircle size={20} />
+                            No Payment
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.875rem",
+                              color: "#991b1b",
+                            }}
+                          >
+                            Plant verification required for earnings
+                          </div>
+                        </>
+                      ) : formData.quantity > 0 ? (
                         <>
                           <div
                             style={{
@@ -2660,7 +2781,12 @@ const CollectorPage = () => {
                           notes: e.target.value,
                         }))
                       }
-                      placeholder="Add any additional notes about the collection quality, harvesting conditions, or special observations..."
+                      disabled={plantIdentificationResult?.isMatch === false}
+                      placeholder={
+                        plantIdentificationResult?.isMatch === false
+                          ? "Notes disabled - plant verification required"
+                          : "Add any additional notes about the collection quality, harvesting conditions, or special observations..."
+                      }
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",
@@ -2669,7 +2795,18 @@ const CollectorPage = () => {
                         fontSize: "1rem",
                         minHeight: "100px",
                         resize: "vertical",
-                        backgroundColor: "#ffffff",
+                        backgroundColor:
+                          plantIdentificationResult?.isMatch === false
+                            ? "#f9fafb"
+                            : "#ffffff",
+                        color:
+                          plantIdentificationResult?.isMatch === false
+                            ? "#9ca3af"
+                            : "#1a1a1a",
+                        cursor:
+                          plantIdentificationResult?.isMatch === false
+                            ? "not-allowed"
+                            : "text",
                         fontFamily: "inherit",
                       }}
                     />
@@ -2713,15 +2850,23 @@ const CollectorPage = () => {
                     type="button"
                     onClick={() => setCurrentStep(3)}
                     disabled={
-                      formData.images.length === 0 || !formData.quantity
+                      formData.images.length === 0 ||
+                      !formData.quantity ||
+                      plantIdentificationResult?.isMatch === false
                     }
                     style={{
                       backgroundColor:
-                        formData.images.length > 0 && formData.quantity
+                        formData.images.length > 0 &&
+                        formData.quantity &&
+                        (!plantIdentificationResult ||
+                          plantIdentificationResult.isMatch)
                           ? "#059669"
                           : "#e5e7eb",
                       color:
-                        formData.images.length > 0 && formData.quantity
+                        formData.images.length > 0 &&
+                        formData.quantity &&
+                        (!plantIdentificationResult ||
+                          plantIdentificationResult.isMatch)
                           ? "white"
                           : "#9ca3af",
                       border: "none",
@@ -2730,12 +2875,17 @@ const CollectorPage = () => {
                       fontSize: "1rem",
                       fontWeight: "600",
                       cursor:
-                        formData.images.length > 0 && formData.quantity
+                        formData.images.length > 0 &&
+                        formData.quantity &&
+                        (!plantIdentificationResult ||
+                          plantIdentificationResult.isMatch)
                           ? "pointer"
                           : "not-allowed",
                     }}
                   >
-                    Continue to Location
+                    {plantIdentificationResult?.isMatch === false
+                      ? "Plant Not Verified - Cannot Proceed"
+                      : "Continue to Location"}
                   </button>
                 </div>
               </div>
